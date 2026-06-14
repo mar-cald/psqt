@@ -2936,41 +2936,6 @@ y_i \sim \mathcal{N}(\mu_i, \sigma^2), \qquad \mu_i = \beta_0 + \beta_1 x_i
 </div>
 </div>
 <p>Identiche. (Unica accortezza: la stima di massima verosimiglianza di <span class="math inline">\(\sigma\)</span> usa <span class="math inline">\(n\)</span> al denominatore, non gli <span class="math inline">\(n - k - 1\)</span> del <em>Residual standard error</em> — perché?)</p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-26-contents" aria-controls="callout-26" aria-expanded="false" aria-label="Toggle callout">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Perché due denominatori diversi per la stessa <span class="math inline">\(\sigma\)</span>?
-</div>
-<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
-</div>
-<div id="callout-26" class="callout-26-contents callout-collapse collapse">
-<div class="callout-body-container callout-body">
-<p>Sono due stimatori diversi: <span class="math inline">\(\hat\sigma^2_{\text{ML}} = \text{SS}_E/n\)</span> (massima verosimiglianza) e <span class="math inline">\(\hat\sigma^2 = \text{SS}_E/(n-k-1)\)</span> (<em>Residual standard error</em>).</p>
-<p><strong>Perché differiscono.</strong> La retta di <code>lm()</code> è quella che <em>minimizza</em> <span class="math inline">\(\text{SS}_E\)</span>: si incolla a <em>questo</em> campione meglio della retta vera. Quindi i residui sono sistematicamente più piccoli dei veri errori, e <span class="math inline">\(\text{SS}_E/n\)</span> <strong>sottostima</strong> <span class="math inline">\(\sigma^2\)</span>. L’esempio estremo: con una regressione semplice e <strong>solo 2 punti</strong> la retta ci passa esattamente sopra, <span class="math inline">\(\text{SS}_E = 0\)</span>, e <span class="math inline">\(\text{SS}_E/n = 0\)</span> direbbe “errore nullo” — assurdo (con 2 punti non sai nulla sulla dispersione attorno alla retta). Dividendo per <span class="math inline">\(n-k-1 = 0\)</span> si ottiene <span class="math inline">\(0/0\)</span>, indefinito: la risposta giusta, “non stimabile”.</p>
-<p><strong>La correzione.</strong> In media <span class="math inline">\(E[\text{SS}_E] = (n-k-1)\,\sigma^2\)</span>, quindi <span class="math inline">\(\text{SS}_E/(n-k-1)\)</span> è <strong>non distorto</strong>, mentre <span class="math inline">\(\text{SS}_E/n\)</span> è troppo piccolo del fattore <span class="math inline">\((n-k-1)/n\)</span>. Quel <span class="math inline">\(n-k-1\)</span> sono i <strong>gradi di libertà residui</strong>: i residui obbediscono a <span class="math inline">\(k+1\)</span> vincoli (le equazioni normali), quindi solo <span class="math inline">\(n-k-1\)</span> sono liberi — esattamente come la varianza campionaria divide per <span class="math inline">\(n-1\)</span>, avendo speso un grado di libertà per stimare la media.</p>
-<p><strong>Perché allora la verosimiglianza usa <span class="math inline">\(n\)</span>?</strong> Perché la massima verosimiglianza cerca il valore che rende più probabili i dati: il massimo rispetto a <span class="math inline">\(\sigma^2\)</span> cade <em>esattamente</em> in <span class="math inline">\(\text{SS}_E/n\)</span> — non è pensata per essere non distorta. Per questo <code>logLik()</code>, AIC e BIC usano <span class="math inline">\(n\)</span>, mentre <code>summary()</code> (Residual standard error), errori standard, test <span class="math inline">\(t\)</span> e bande usano <span class="math inline">\(n-k-1\)</span>. Con <span class="math inline">\(n\)</span> grande la differenza è trascurabile (qui 434 contro 432).</p>
-<p>Verifichiamolo: simuliamo tanti campioni con <span class="math inline">\(\sigma\)</span> noto e confrontiamo le medie delle due stime.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb209"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb209-1"><a href="#cb209-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb209-2"><a href="#cb209-2" aria-hidden="true" tabindex="-1"></a>stime <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">5000</span>, {</span>
-<span id="cb209-3"><a href="#cb209-3" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>                                  <span class="co"># n = 8, un predittore (k = 1)</span></span>
-<span id="cb209-4"><a href="#cb209-4" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> x <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">8</span>, <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">4</span>)    <span class="co"># sigma vero = 4, quindi sigma^2 = 16</span></span>
-<span id="cb209-5"><a href="#cb209-5" aria-hidden="true" tabindex="-1"></a>  e <span class="ot">&lt;-</span> <span class="fu">residuals</span>(<span class="fu">lm</span>(y <span class="sc">~</span> x))</span>
-<span id="cb209-6"><a href="#cb209-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="at">ML =</span> <span class="fu">sum</span>(e<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="dv">8</span>, <span class="at">corretta =</span> <span class="fu">sum</span>(e<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> (<span class="dv">8</span> <span class="sc">-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="dv">1</span>))   <span class="co"># /n   vs   /(n-k-1)</span></span>
-<span id="cb209-7"><a href="#cb209-7" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb209-8"><a href="#cb209-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rowMeans</span>(stime)        <span class="co"># media delle stime di sigma^2 (vero = 16)</span></span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>      ML corretta 
-12.06373 16.08497 </code></pre>
-</div>
-</div>
-<p>La stima ML centra in media un valore <em>più basso</em> del vero <span class="math inline">\(\sigma^2 = 16\)</span> (circa <span class="math inline">\(16 \times 6/8 = 12\)</span>), mentre quella corretta lo centra in pieno.</p>
-</div>
-</div>
-</div>
 <div class="callout callout-style-default callout-important callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3003,7 +2968,7 @@ Importante
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Soluzione — Esercizio 10">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3012,24 +2977,24 @@ Soluzione — Esercizio 10
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-29" class="callout-29-contents callout-collapse collapse">
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="cell">
-<div class="sourceCode cell-code" id="cb211"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb211-1"><a href="#cb211-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sapply</span>(<span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>), <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb209"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb209-1"><a href="#cb209-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sapply</span>(<span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>), <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -10.335352  -9.002018  -9.890907</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb213"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb213-1"><a href="#cb213-1" aria-hidden="true" tabindex="-1"></a>mu_griglia <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">8</span>, <span class="dv">12</span>, <span class="at">by =</span> <span class="fl">0.001</span>)</span>
-<span id="cb213-2"><a href="#cb213-2" aria-hidden="true" tabindex="-1"></a>ll <span class="ot">&lt;-</span> <span class="fu">sapply</span>(mu_griglia, <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)))</span>
-<span id="cb213-3"><a href="#cb213-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">massimo =</span> mu_griglia[<span class="fu">which.max</span>(ll)], <span class="at">media =</span> <span class="fu">mean</span>(y))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb211"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb211-1"><a href="#cb211-1" aria-hidden="true" tabindex="-1"></a>mu_griglia <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">8</span>, <span class="dv">12</span>, <span class="at">by =</span> <span class="fl">0.001</span>)</span>
+<span id="cb211-2"><a href="#cb211-2" aria-hidden="true" tabindex="-1"></a>ll <span class="ot">&lt;-</span> <span class="fu">sapply</span>(mu_griglia, <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)))</span>
+<span id="cb211-3"><a href="#cb211-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">massimo =</span> mu_griglia[<span class="fu">which.max</span>(ll)], <span class="at">media =</span> <span class="fu">mean</span>(y))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>massimo   media 
    10.1    10.1 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb215"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb215-1"><a href="#cb215-1" aria-hidden="true" tabindex="-1"></a>m_age <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_age, <span class="at">data =</span> kidiq)</span>
-<span id="cb215-2"><a href="#cb215-2" aria-hidden="true" tabindex="-1"></a>s_ml  <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(<span class="fu">residuals</span>(m_age)<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">nobs</span>(m_age))</span>
-<span id="cb215-3"><a href="#cb215-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">a_mano =</span> <span class="fu">sum</span>(<span class="fu">dnorm</span>(kidiq<span class="sc">$</span>kid_score, <span class="fu">fitted</span>(m_age), s_ml, <span class="at">log =</span> <span class="cn">TRUE</span>)),</span>
-<span id="cb215-4"><a href="#cb215-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">logLik =</span> <span class="fu">as.numeric</span>(<span class="fu">logLik</span>(m_age)))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb213"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb213-1"><a href="#cb213-1" aria-hidden="true" tabindex="-1"></a>m_age <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_age, <span class="at">data =</span> kidiq)</span>
+<span id="cb213-2"><a href="#cb213-2" aria-hidden="true" tabindex="-1"></a>s_ml  <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(<span class="fu">residuals</span>(m_age)<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> <span class="fu">nobs</span>(m_age))</span>
+<span id="cb213-3"><a href="#cb213-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">a_mano =</span> <span class="fu">sum</span>(<span class="fu">dnorm</span>(kidiq<span class="sc">$</span>kid_score, <span class="fu">fitted</span>(m_age), s_ml, <span class="at">log =</span> <span class="cn">TRUE</span>)),</span>
+<span id="cb213-4"><a href="#cb213-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">logLik =</span> <span class="fu">as.numeric</span>(<span class="fu">logLik</span>(m_age)))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   a_mano    logLik 
 -1922.444 -1922.444 </code></pre>
@@ -3072,20 +3037,20 @@ Soluzione — Esercizio 10
 <div class="cell">
 <details class="code-fold">
 <summary>Codice del grafico</summary>
-<div class="sourceCode cell-code" id="cb217"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb217-1"><a href="#cb217-1" aria-hidden="true" tabindex="-1"></a>cx  <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">200</span>)</span>
-<span id="cb217-2"><a href="#cb217-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">4</span> <span class="sc">*</span> cx)                <span class="co"># adattamento: cresce sempre</span></span>
-<span id="cb217-3"><a href="#cb217-3" aria-hidden="true" tabindex="-1"></a>gen <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">4</span> <span class="sc">*</span> cx) <span class="sc">-</span> <span class="fl">1.1</span> <span class="sc">*</span> cx<span class="sc">^</span><span class="dv">2</span>   <span class="co"># generalizzabilità: sale, poi scende</span></span>
-<span id="cb217-4"><a href="#cb217-4" aria-hidden="true" tabindex="-1"></a>picco <span class="ot">&lt;-</span> cx[<span class="fu">which.max</span>(gen)]</span>
-<span id="cb217-5"><a href="#cb217-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb217-6"><a href="#cb217-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cx, fit, <span class="at">type =</span> <span class="st">"n"</span>, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">1.08</span>), <span class="at">xaxt =</span> <span class="st">"n"</span>, <span class="at">yaxt =</span> <span class="st">"n"</span>,</span>
-<span id="cb217-7"><a href="#cb217-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"numero di parametri"</span>, <span class="at">ylab =</span> <span class="st">"prestazione del modello"</span>)</span>
-<span id="cb217-8"><a href="#cb217-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rect</span>(picco, <span class="sc">-</span><span class="fl">0.1</span>, <span class="fl">1.1</span>, <span class="fl">1.2</span>, <span class="at">col =</span> <span class="fu">adjustcolor</span>(<span class="st">"grey60"</span>, <span class="fl">0.25</span>), <span class="at">border =</span> <span class="cn">NA</span>)</span>
-<span id="cb217-9"><a href="#cb217-9" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(cx, fit, <span class="at">lwd =</span> <span class="dv">3</span>)</span>
-<span id="cb217-10"><a href="#cb217-10" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(cx, gen, <span class="at">lwd =</span> <span class="dv">3</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
-<span id="cb217-11"><a href="#cb217-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> picco, <span class="at">lty =</span> <span class="dv">3</span>)</span>
-<span id="cb217-12"><a href="#cb217-12" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.66</span>, <span class="fl">1.03</span>, <span class="st">"adattamento ai dati osservati"</span>)</span>
-<span id="cb217-13"><a href="#cb217-13" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.70</span>, <span class="fl">0.48</span>, <span class="st">"previsione su dati nuovi"</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
-<span id="cb217-14"><a href="#cb217-14" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.86</span>, <span class="fl">0.10</span>, <span class="st">"overfitting"</span>, <span class="at">col =</span> <span class="st">"grey30"</span>, <span class="at">font =</span> <span class="dv">3</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb215"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb215-1"><a href="#cb215-1" aria-hidden="true" tabindex="-1"></a>cx  <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">200</span>)</span>
+<span id="cb215-2"><a href="#cb215-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">4</span> <span class="sc">*</span> cx)                <span class="co"># adattamento: cresce sempre</span></span>
+<span id="cb215-3"><a href="#cb215-3" aria-hidden="true" tabindex="-1"></a>gen <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">4</span> <span class="sc">*</span> cx) <span class="sc">-</span> <span class="fl">1.1</span> <span class="sc">*</span> cx<span class="sc">^</span><span class="dv">2</span>   <span class="co"># generalizzabilità: sale, poi scende</span></span>
+<span id="cb215-4"><a href="#cb215-4" aria-hidden="true" tabindex="-1"></a>picco <span class="ot">&lt;-</span> cx[<span class="fu">which.max</span>(gen)]</span>
+<span id="cb215-5"><a href="#cb215-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb215-6"><a href="#cb215-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cx, fit, <span class="at">type =</span> <span class="st">"n"</span>, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">1.08</span>), <span class="at">xaxt =</span> <span class="st">"n"</span>, <span class="at">yaxt =</span> <span class="st">"n"</span>,</span>
+<span id="cb215-7"><a href="#cb215-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"numero di parametri"</span>, <span class="at">ylab =</span> <span class="st">"prestazione del modello"</span>)</span>
+<span id="cb215-8"><a href="#cb215-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rect</span>(picco, <span class="sc">-</span><span class="fl">0.1</span>, <span class="fl">1.1</span>, <span class="fl">1.2</span>, <span class="at">col =</span> <span class="fu">adjustcolor</span>(<span class="st">"grey60"</span>, <span class="fl">0.25</span>), <span class="at">border =</span> <span class="cn">NA</span>)</span>
+<span id="cb215-9"><a href="#cb215-9" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(cx, fit, <span class="at">lwd =</span> <span class="dv">3</span>)</span>
+<span id="cb215-10"><a href="#cb215-10" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(cx, gen, <span class="at">lwd =</span> <span class="dv">3</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
+<span id="cb215-11"><a href="#cb215-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> picco, <span class="at">lty =</span> <span class="dv">3</span>)</span>
+<span id="cb215-12"><a href="#cb215-12" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.66</span>, <span class="fl">1.03</span>, <span class="st">"adattamento ai dati osservati"</span>)</span>
+<span id="cb215-13"><a href="#cb215-13" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.70</span>, <span class="fl">0.48</span>, <span class="st">"previsione su dati nuovi"</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
+<span id="cb215-14"><a href="#cb215-14" aria-hidden="true" tabindex="-1"></a><span class="fu">text</span>(<span class="fl">0.86</span>, <span class="fl">0.10</span>, <span class="st">"overfitting"</span>, <span class="at">col =</span> <span class="st">"grey30"</span>, <span class="at">font =</span> <span class="dv">3</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -3101,33 +3066,33 @@ Soluzione — Esercizio 10
 </blockquote>
 <p>Vediamolo con un esempio classico (McElreath, 2023): volume cerebrale e massa corporea di sette specie di ominidi. Con 7 punti, un polinomio di grado 6 passa <em>esattamente</em> per tutti i punti:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb218"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb218-1"><a href="#cb218-1" aria-hidden="true" tabindex="-1"></a>ominidi <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb218-2"><a href="#cb218-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">specie   =</span> <span class="fu">c</span>(<span class="st">"afarensis"</span>, <span class="st">"africanus"</span>, <span class="st">"habilis"</span>, <span class="st">"boisei"</span>,</span>
-<span id="cb218-3"><a href="#cb218-3" aria-hidden="true" tabindex="-1"></a>               <span class="st">"rudolfensis"</span>, <span class="st">"ergaster"</span>, <span class="st">"sapiens"</span>),</span>
-<span id="cb218-4"><a href="#cb218-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">massa    =</span> <span class="fu">c</span>(<span class="fl">37.0</span>, <span class="fl">35.5</span>, <span class="fl">34.5</span>, <span class="fl">41.5</span>, <span class="fl">55.5</span>, <span class="fl">61.0</span>, <span class="fl">53.5</span>),</span>
-<span id="cb218-5"><a href="#cb218-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cervello =</span> <span class="fu">c</span>(<span class="dv">438</span>, <span class="dv">452</span>, <span class="dv">612</span>, <span class="dv">521</span>, <span class="dv">752</span>, <span class="dv">871</span>, <span class="dv">1350</span>))</span>
-<span id="cb218-6"><a href="#cb218-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb218-7"><a href="#cb218-7" aria-hidden="true" tabindex="-1"></a>r2 <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, <span class="cf">function</span>(g)</span>
-<span id="cb218-8"><a href="#cb218-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summary</span>(<span class="fu">lm</span>(cervello <span class="sc">~</span> <span class="fu">poly</span>(massa, g), <span class="at">data =</span> ominidi))<span class="sc">$</span>r.squared)</span>
-<span id="cb218-9"><a href="#cb218-9" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(r2, <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb216"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb216-1"><a href="#cb216-1" aria-hidden="true" tabindex="-1"></a>ominidi <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb216-2"><a href="#cb216-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">specie   =</span> <span class="fu">c</span>(<span class="st">"afarensis"</span>, <span class="st">"africanus"</span>, <span class="st">"habilis"</span>, <span class="st">"boisei"</span>,</span>
+<span id="cb216-3"><a href="#cb216-3" aria-hidden="true" tabindex="-1"></a>               <span class="st">"rudolfensis"</span>, <span class="st">"ergaster"</span>, <span class="st">"sapiens"</span>),</span>
+<span id="cb216-4"><a href="#cb216-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">massa    =</span> <span class="fu">c</span>(<span class="fl">37.0</span>, <span class="fl">35.5</span>, <span class="fl">34.5</span>, <span class="fl">41.5</span>, <span class="fl">55.5</span>, <span class="fl">61.0</span>, <span class="fl">53.5</span>),</span>
+<span id="cb216-5"><a href="#cb216-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cervello =</span> <span class="fu">c</span>(<span class="dv">438</span>, <span class="dv">452</span>, <span class="dv">612</span>, <span class="dv">521</span>, <span class="dv">752</span>, <span class="dv">871</span>, <span class="dv">1350</span>))</span>
+<span id="cb216-6"><a href="#cb216-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb216-7"><a href="#cb216-7" aria-hidden="true" tabindex="-1"></a>r2 <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, <span class="cf">function</span>(g)</span>
+<span id="cb216-8"><a href="#cb216-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summary</span>(<span class="fu">lm</span>(cervello <span class="sc">~</span> <span class="fu">poly</span>(massa, g), <span class="at">data =</span> ominidi))<span class="sc">$</span>r.squared)</span>
+<span id="cb216-9"><a href="#cb216-9" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(r2, <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.49 0.54 0.68 0.81 0.99 1.00</code></pre>
 </div>
 </div>
 <p>L’<span class="math inline">\(R^2\)</span> sale monotonicamente con il grado del polinomio, fino a 1. Ma guardate <em>come</em> lo fa:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb220"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb220-1"><a href="#cb220-1" aria-hidden="true" tabindex="-1"></a>griglia <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">massa =</span> <span class="fu">seq</span>(<span class="fl">34.5</span>, <span class="dv">61</span>, <span class="at">length.out =</span> <span class="dv">200</span>))</span>
-<span id="cb220-2"><a href="#cb220-2" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
-<span id="cb220-3"><a href="#cb220-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (g <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>) {</span>
-<span id="cb220-4"><a href="#cb220-4" aria-hidden="true" tabindex="-1"></a>  m  <span class="ot">&lt;-</span> <span class="fu">lm</span>(cervello <span class="sc">~</span> <span class="fu">poly</span>(massa, g), <span class="at">data =</span> ominidi)</span>
-<span id="cb220-5"><a href="#cb220-5" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> <span class="fu">predict</span>(m, <span class="at">newdata =</span> griglia)</span>
-<span id="cb220-6"><a href="#cb220-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(cervello <span class="sc">~</span> massa, <span class="at">data =</span> ominidi, <span class="at">pch =</span> <span class="dv">19</span>,</span>
-<span id="cb220-7"><a href="#cb220-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">ylim =</span> <span class="fu">range</span>(<span class="fu">c</span>(ominidi<span class="sc">$</span>cervello, pr, <span class="dv">0</span>)),</span>
-<span id="cb220-8"><a href="#cb220-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"Massa corporea (kg)"</span>, <span class="at">ylab =</span> <span class="st">"Volume cranico (cc)"</span>,</span>
-<span id="cb220-9"><a href="#cb220-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">main =</span> <span class="fu">bquote</span>(<span class="st">"Grado"</span> <span class="sc">~</span> .(g) <span class="sc">*</span> <span class="st">":"</span> <span class="sc">~</span> R<span class="sc">^</span><span class="dv">2</span> <span class="sc">==</span> .(<span class="fu">round</span>(<span class="fu">summary</span>(m)<span class="sc">$</span>r.squared, <span class="dv">2</span>))))</span>
-<span id="cb220-10"><a href="#cb220-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lines</span>(griglia<span class="sc">$</span>massa, pr, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb220-11"><a href="#cb220-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">3</span>)</span>
-<span id="cb220-12"><a href="#cb220-12" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb218"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb218-1"><a href="#cb218-1" aria-hidden="true" tabindex="-1"></a>griglia <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">massa =</span> <span class="fu">seq</span>(<span class="fl">34.5</span>, <span class="dv">61</span>, <span class="at">length.out =</span> <span class="dv">200</span>))</span>
+<span id="cb218-2"><a href="#cb218-2" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb218-3"><a href="#cb218-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (g <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>) {</span>
+<span id="cb218-4"><a href="#cb218-4" aria-hidden="true" tabindex="-1"></a>  m  <span class="ot">&lt;-</span> <span class="fu">lm</span>(cervello <span class="sc">~</span> <span class="fu">poly</span>(massa, g), <span class="at">data =</span> ominidi)</span>
+<span id="cb218-5"><a href="#cb218-5" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> <span class="fu">predict</span>(m, <span class="at">newdata =</span> griglia)</span>
+<span id="cb218-6"><a href="#cb218-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(cervello <span class="sc">~</span> massa, <span class="at">data =</span> ominidi, <span class="at">pch =</span> <span class="dv">19</span>,</span>
+<span id="cb218-7"><a href="#cb218-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">ylim =</span> <span class="fu">range</span>(<span class="fu">c</span>(ominidi<span class="sc">$</span>cervello, pr, <span class="dv">0</span>)),</span>
+<span id="cb218-8"><a href="#cb218-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"Massa corporea (kg)"</span>, <span class="at">ylab =</span> <span class="st">"Volume cranico (cc)"</span>,</span>
+<span id="cb218-9"><a href="#cb218-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">main =</span> <span class="fu">bquote</span>(<span class="st">"Grado"</span> <span class="sc">~</span> .(g) <span class="sc">*</span> <span class="st">":"</span> <span class="sc">~</span> R<span class="sc">^</span><span class="dv">2</span> <span class="sc">==</span> .(<span class="fu">round</span>(<span class="fu">summary</span>(m)<span class="sc">$</span>r.squared, <span class="dv">2</span>))))</span>
+<span id="cb218-10"><a href="#cb218-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lines</span>(griglia<span class="sc">$</span>massa, pr, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb218-11"><a href="#cb218-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">3</span>)</span>
+<span id="cb218-12"><a href="#cb218-12" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -3143,13 +3108,13 @@ Soluzione — Esercizio 10
 <h2 data-number="7.3" class="anchored" data-anchor-id="il-confronto-mediante-anova"><span class="header-section-number">7.3</span> Il confronto mediante ANOVA</h2>
 <p>Costruiamo una serie di modelli per i dati <code>kidiq</code>, dal modello <strong>nullo</strong> (solo intercetta) al modello con interazione:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb221"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a>m0 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> <span class="dv">1</span>,               <span class="at">data =</span> kidiq)</span>
-<span id="cb221-2"><a href="#cb221-2" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq,          <span class="at">data =</span> kidiq)</span>
-<span id="cb221-3"><a href="#cb221-3" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_hs,          <span class="at">data =</span> kidiq)</span>
-<span id="cb221-4"><a href="#cb221-4" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">+</span> mom_hs, <span class="at">data =</span> kidiq)</span>
-<span id="cb221-5"><a href="#cb221-5" aria-hidden="true" tabindex="-1"></a>m4 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs, <span class="at">data =</span> kidiq)</span>
-<span id="cb221-6"><a href="#cb221-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb221-7"><a href="#cb221-7" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(m0, m1, m2, m3, m4)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb219"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb219-1"><a href="#cb219-1" aria-hidden="true" tabindex="-1"></a>m0 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> <span class="dv">1</span>,               <span class="at">data =</span> kidiq)</span>
+<span id="cb219-2"><a href="#cb219-2" aria-hidden="true" tabindex="-1"></a>m1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq,          <span class="at">data =</span> kidiq)</span>
+<span id="cb219-3"><a href="#cb219-3" aria-hidden="true" tabindex="-1"></a>m2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_hs,          <span class="at">data =</span> kidiq)</span>
+<span id="cb219-4"><a href="#cb219-4" aria-hidden="true" tabindex="-1"></a>m3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">+</span> mom_hs, <span class="at">data =</span> kidiq)</span>
+<span id="cb219-5"><a href="#cb219-5" aria-hidden="true" tabindex="-1"></a>m4 <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs, <span class="at">data =</span> kidiq)</span>
+<span id="cb219-6"><a href="#cb219-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb219-7"><a href="#cb219-7" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(m0, m1, m2, m3, m4)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Analysis of Variance Table
 
@@ -3203,8 +3168,8 @@ Avviso
 <p>dove <span class="math inline">\(\mathcal{L}\)</span> è la verosimiglianza del modello (la <a href="#sec-likelihood" class="quarto-xref">Sezione&nbsp;6</a>), <span class="math inline">\(k\)</span> il numero di parametri e <span class="math inline">\(n\)</span> il numero di osservazioni. Entrambi premiano il fit (primo termine) e <strong>penalizzano la complessità</strong> (secondo termine): misurano l’efficienza del modello in termini di <em>previsione</em> dei dati, proprio quello che l’overfitting comprometteva.</p>
 <p>Dati <span class="math inline">\(k\)</span> valori di AIC/BIC per <span class="math inline">\(k\)</span> modelli diversi, <strong>si preferisce il modello con il valore più basso</strong>. Due vantaggi pratici rispetto all’ANOVA: i modelli non devono essere annidati, e non c’è nessun p-value di mezzo.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb223"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb223-1"><a href="#cb223-1" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m0, m1, m2, m3, m4)</span>
-<span id="cb223-2"><a href="#cb223-2" aria-hidden="true" tabindex="-1"></a>A[<span class="fu">order</span>(A<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb221"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m0, m1, m2, m3, m4)</span>
+<span id="cb221-2"><a href="#cb221-2" aria-hidden="true" tabindex="-1"></a>A[<span class="fu">order</span>(A<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   df      AIC
 m4  5 3745.086
@@ -3213,8 +3178,8 @@ m1  3 3757.216
 m2  3 3829.506
 m0  2 3852.576</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb225"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb225-1"><a href="#cb225-1" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="fu">BIC</span>(m0, m1, m2, m3, m4)</span>
-<span id="cb225-2"><a href="#cb225-2" aria-hidden="true" tabindex="-1"></a>B[<span class="fu">order</span>(B<span class="sc">$</span>BIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb223"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb223-1"><a href="#cb223-1" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="fu">BIC</span>(m0, m1, m2, m3, m4)</span>
+<span id="cb223-2"><a href="#cb223-2" aria-hidden="true" tabindex="-1"></a>B[<span class="fu">order</span>(B<span class="sc">$</span>BIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   df      BIC
 m4  5 3765.451
@@ -3235,19 +3200,19 @@ m0  2 3860.723</code></pre>
 </ol>
 <p>Confrontiamo ad esempio il modello con interazione (<code>m4</code>) con quello senza (<code>m3</code>):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb227"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb227-1"><a href="#cb227-1" aria-hidden="true" tabindex="-1"></a>(DAIC <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m3) <span class="sc">-</span> <span class="fu">AIC</span>(m4))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb225"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb225-1"><a href="#cb225-1" aria-hidden="true" tabindex="-1"></a>(DAIC <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m3) <span class="sc">-</span> <span class="fu">AIC</span>(m4))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 6.903268</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb229"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb229-1"><a href="#cb229-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(DAIC <span class="sc">/</span> <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb227"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb227-1"><a href="#cb227-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(DAIC <span class="sc">/</span> <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 31.55191</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb231"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb231-1"><a href="#cb231-1" aria-hidden="true" tabindex="-1"></a>(DBIC <span class="ot">&lt;-</span> <span class="fu">BIC</span>(m3) <span class="sc">-</span> <span class="fu">BIC</span>(m4))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb229"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb229-1"><a href="#cb229-1" aria-hidden="true" tabindex="-1"></a>(DBIC <span class="ot">&lt;-</span> <span class="fu">BIC</span>(m3) <span class="sc">-</span> <span class="fu">BIC</span>(m4))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.830223</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb233"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb233-1"><a href="#cb233-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(DBIC <span class="sc">/</span> <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb231"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb231-1"><a href="#cb231-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(DBIC <span class="sc">/</span> <span class="dv">2</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 4.116947</code></pre>
 </div>
@@ -3262,10 +3227,10 @@ m0  2 3860.723</code></pre>
 <h2 data-number="7.6" class="anchored" data-anchor-id="verosimiglianza-relativa-e-pesi-di-akaike"><span class="header-section-number">7.6</span> Verosimiglianza relativa e pesi di Akaike</h2>
 <p>Possiamo estendere il ragionamento a tutti i modelli insieme, calcolando per ciascuno la verosimiglianza relativa rispetto al modello peggiore (qui il nullo):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb235"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb235-1"><a href="#cb235-1" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m0, m1, m2, m3, m4)</span>
-<span id="cb235-2"><a href="#cb235-2" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>delta <span class="ot">&lt;-</span> <span class="fu">max</span>(A<span class="sc">$</span>AIC) <span class="sc">-</span> A<span class="sc">$</span>AIC</span>
-<span id="cb235-3"><a href="#cb235-3" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>rl    <span class="ot">&lt;-</span> <span class="fu">exp</span>(A<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>)</span>
-<span id="cb235-4"><a href="#cb235-4" aria-hidden="true" tabindex="-1"></a>A[<span class="fu">order</span>(A<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb233"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb233-1"><a href="#cb233-1" aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">AIC</span>(m0, m1, m2, m3, m4)</span>
+<span id="cb233-2"><a href="#cb233-2" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>delta <span class="ot">&lt;-</span> <span class="fu">max</span>(A<span class="sc">$</span>AIC) <span class="sc">-</span> A<span class="sc">$</span>AIC</span>
+<span id="cb233-3"><a href="#cb233-3" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>rl    <span class="ot">&lt;-</span> <span class="fu">exp</span>(A<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>)</span>
+<span id="cb233-4"><a href="#cb233-4" aria-hidden="true" tabindex="-1"></a>A[<span class="fu">order</span>(A<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   df      AIC     delta           rl
 m4  5 3745.086 107.49072 2.194387e+23
@@ -3283,8 +3248,8 @@ w_i = \text{Prob}(M_i \,|\, \text{dati}, \mathcal{M}) =
 \]</span></p>
 <p>dove <span class="math inline">\(J\)</span> è il numero di modelli considerati (nel nostro caso <span class="math inline">\(J = 5\)</span>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb237"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb237-1"><a href="#cb237-1" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>w <span class="ot">&lt;-</span> A<span class="sc">$</span>rl <span class="sc">/</span> <span class="fu">sum</span>(A<span class="sc">$</span>rl)</span>
-<span id="cb237-2"><a href="#cb237-2" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(A<span class="sc">$</span>w, <span class="at">names.arg =</span> <span class="fu">rownames</span>(A), <span class="at">xlab =</span> <span class="st">"modelli"</span>, <span class="at">ylab =</span> <span class="st">"peso di Akaike"</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb235"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb235-1"><a href="#cb235-1" aria-hidden="true" tabindex="-1"></a>A<span class="sc">$</span>w <span class="ot">&lt;-</span> A<span class="sc">$</span>rl <span class="sc">/</span> <span class="fu">sum</span>(A<span class="sc">$</span>rl)</span>
+<span id="cb235-2"><a href="#cb235-2" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(A<span class="sc">$</span>w, <span class="at">names.arg =</span> <span class="fu">rownames</span>(A), <span class="at">xlab =</span> <span class="st">"modelli"</span>, <span class="at">ylab =</span> <span class="st">"peso di Akaike"</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -3299,8 +3264,8 @@ w_i = \text{Prob}(M_i \,|\, \text{dati}, \mathcal{M}) =
 <h2 data-number="7.7" class="anchored" data-anchor-id="il-pacchetto-mumin"><span class="header-section-number">7.7</span> Il pacchetto MuMIn</h2>
 <p>Il pacchetto <strong>MuMIn</strong> automatizza l’intera procedura e produce una tabella di selezione completa (stime, gradi di libertà, log-verosimiglianza, AIC, delta e pesi):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb238"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb238-1"><a href="#cb238-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MuMIn)</span>
-<span id="cb238-2"><a href="#cb238-2" aria-hidden="true" tabindex="-1"></a>(AICtable <span class="ot">&lt;-</span> <span class="fu">model.sel</span>(m0, m1, m2, m3, m4, <span class="at">rank =</span> AIC))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb236"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb236-1"><a href="#cb236-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MuMIn)</span>
+<span id="cb236-2"><a href="#cb236-2" aria-hidden="true" tabindex="-1"></a>(AICtable <span class="ot">&lt;-</span> <span class="fu">model.sel</span>(m0, m1, m2, m3, m4, <span class="at">rank =</span> AIC))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Model selection table 
     (Int) mom_iq mom_hs mom_hs:mom_iq df    logLik    AIC  delta weight
@@ -3314,9 +3279,9 @@ Models ranked by AIC(x) </code></pre>
 </div>
 <p>E per i confronti a coppie possiamo costruire la matrice delle evidenze relative (in scala logaritmica, per leggibilità):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb240"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb240-1"><a href="#cb240-1" aria-hidden="true" tabindex="-1"></a>ER <span class="ot">&lt;-</span> <span class="fu">outer</span>(A<span class="sc">$</span>rl, A<span class="sc">$</span>rl, <span class="st">"/"</span>)</span>
-<span id="cb240-2"><a href="#cb240-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(ER) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(ER) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb240-3"><a href="#cb240-3" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">log</span>(ER), <span class="dv">1</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb238"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb238-1"><a href="#cb238-1" aria-hidden="true" tabindex="-1"></a>ER <span class="ot">&lt;-</span> <span class="fu">outer</span>(A<span class="sc">$</span>rl, A<span class="sc">$</span>rl, <span class="st">"/"</span>)</span>
+<span id="cb238-2"><a href="#cb238-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(ER) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(ER) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb238-3"><a href="#cb238-3" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">log</span>(ER), <span class="dv">1</span>)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     m0    m1    m2    m3    m4
 m0  0.0 -47.7 -11.5 -50.3 -53.7
@@ -3331,17 +3296,17 @@ m4 53.7   6.1  42.2   3.5   0.0</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Codice del grafico</summary>
-<div class="sourceCode cell-code" id="cb242"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb242-1"><a href="#cb242-1" aria-hidden="true" tabindex="-1"></a>logER <span class="ot">&lt;-</span> <span class="fu">log</span>(ER)</span>
-<span id="cb242-2"><a href="#cb242-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(logER)</span>
-<span id="cb242-3"><a href="#cb242-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
-<span id="cb242-4"><a href="#cb242-4" aria-hidden="true" tabindex="-1"></a><span class="fu">image</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="dv">1</span><span class="sc">:</span>n, <span class="fu">t</span>(logER[n<span class="sc">:</span><span class="dv">1</span>, ]), <span class="at">col =</span> <span class="fu">hcl.colors</span>(<span class="dv">25</span>, <span class="st">"Blue-Red 3"</span>),</span>
-<span id="cb242-5"><a href="#cb242-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">axes =</span> <span class="cn">FALSE</span>, <span class="at">xlab =</span> <span class="st">""</span>, <span class="at">ylab =</span> <span class="st">""</span>,</span>
-<span id="cb242-6"><a href="#cb242-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">main =</span> <span class="st">"log evidenza relativa (riga vs colonna)"</span>)</span>
-<span id="cb242-7"><a href="#cb242-7" aria-hidden="true" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">1</span>, <span class="at">at =</span> <span class="dv">1</span><span class="sc">:</span>n, <span class="at">labels =</span> <span class="fu">colnames</span>(logER))</span>
-<span id="cb242-8"><a href="#cb242-8" aria-hidden="true" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">2</span>, <span class="at">at =</span> <span class="dv">1</span><span class="sc">:</span>n, <span class="at">labels =</span> <span class="fu">rev</span>(<span class="fu">rownames</span>(logER)), <span class="at">las =</span> <span class="dv">1</span>)</span>
-<span id="cb242-9"><a href="#cb242-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n)</span>
-<span id="cb242-10"><a href="#cb242-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">text</span>(j, n <span class="sc">+</span> <span class="dv">1</span> <span class="sc">-</span> i, <span class="fu">round</span>(logER[i, j], <span class="dv">1</span>), <span class="at">cex =</span> <span class="fl">0.9</span>)</span>
-<span id="cb242-11"><a href="#cb242-11" aria-hidden="true" tabindex="-1"></a><span class="fu">box</span>()</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb240"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb240-1"><a href="#cb240-1" aria-hidden="true" tabindex="-1"></a>logER <span class="ot">&lt;-</span> <span class="fu">log</span>(ER)</span>
+<span id="cb240-2"><a href="#cb240-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(logER)</span>
+<span id="cb240-3"><a href="#cb240-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb240-4"><a href="#cb240-4" aria-hidden="true" tabindex="-1"></a><span class="fu">image</span>(<span class="dv">1</span><span class="sc">:</span>n, <span class="dv">1</span><span class="sc">:</span>n, <span class="fu">t</span>(logER[n<span class="sc">:</span><span class="dv">1</span>, ]), <span class="at">col =</span> <span class="fu">hcl.colors</span>(<span class="dv">25</span>, <span class="st">"Blue-Red 3"</span>),</span>
+<span id="cb240-5"><a href="#cb240-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">axes =</span> <span class="cn">FALSE</span>, <span class="at">xlab =</span> <span class="st">""</span>, <span class="at">ylab =</span> <span class="st">""</span>,</span>
+<span id="cb240-6"><a href="#cb240-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">main =</span> <span class="st">"log evidenza relativa (riga vs colonna)"</span>)</span>
+<span id="cb240-7"><a href="#cb240-7" aria-hidden="true" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">1</span>, <span class="at">at =</span> <span class="dv">1</span><span class="sc">:</span>n, <span class="at">labels =</span> <span class="fu">colnames</span>(logER))</span>
+<span id="cb240-8"><a href="#cb240-8" aria-hidden="true" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">2</span>, <span class="at">at =</span> <span class="dv">1</span><span class="sc">:</span>n, <span class="at">labels =</span> <span class="fu">rev</span>(<span class="fu">rownames</span>(logER)), <span class="at">las =</span> <span class="dv">1</span>)</span>
+<span id="cb240-9"><a href="#cb240-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n)</span>
+<span id="cb240-10"><a href="#cb240-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">text</span>(j, n <span class="sc">+</span> <span class="dv">1</span> <span class="sc">-</span> i, <span class="fu">round</span>(logER[i, j], <span class="dv">1</span>), <span class="at">cex =</span> <span class="fl">0.9</span>)</span>
+<span id="cb240-11"><a href="#cb240-11" aria-hidden="true" tabindex="-1"></a><span class="fu">box</span>()</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -3383,7 +3348,7 @@ m4 53.7   6.1  42.2   3.5   0.0</code></pre>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Soluzione — Esercizio 11">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-32-contents" aria-controls="callout-32" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-31-contents" aria-controls="callout-31" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3392,18 +3357,18 @@ Soluzione — Esercizio 11
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-32" class="callout-32-contents callout-collapse collapse">
+<div id="callout-31" class="callout-31-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="cell">
-<div class="sourceCode cell-code" id="cb243"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb243-1"><a href="#cb243-1" aria-hidden="true" tabindex="-1"></a>mA <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs,                      <span class="at">data =</span> kidiq)</span>
-<span id="cb243-2"><a href="#cb243-2" aria-hidden="true" tabindex="-1"></a>mB <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_age,            <span class="at">data =</span> kidiq)</span>
-<span id="cb243-3"><a href="#cb243-3" aria-hidden="true" tabindex="-1"></a>mC <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_work,           <span class="at">data =</span> kidiq)</span>
-<span id="cb243-4"><a href="#cb243-4" aria-hidden="true" tabindex="-1"></a>mD <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_age <span class="sc">+</span> mom_work, <span class="at">data =</span> kidiq)</span>
-<span id="cb243-5"><a href="#cb243-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb243-6"><a href="#cb243-6" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mA, mB, mC, mD)</span>
-<span id="cb243-7"><a href="#cb243-7" aria-hidden="true" tabindex="-1"></a>tab<span class="sc">$</span>delta <span class="ot">&lt;-</span> tab<span class="sc">$</span>AIC <span class="sc">-</span> <span class="fu">min</span>(tab<span class="sc">$</span>AIC)</span>
-<span id="cb243-8"><a href="#cb243-8" aria-hidden="true" tabindex="-1"></a>tab<span class="sc">$</span>w     <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="sc">-</span>tab<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="fu">sum</span>(<span class="fu">exp</span>(<span class="sc">-</span>tab<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>))</span>
-<span id="cb243-9"><a href="#cb243-9" aria-hidden="true" tabindex="-1"></a>tab[<span class="fu">order</span>(tab<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb241"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb241-1"><a href="#cb241-1" aria-hidden="true" tabindex="-1"></a>mA <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs,                      <span class="at">data =</span> kidiq)</span>
+<span id="cb241-2"><a href="#cb241-2" aria-hidden="true" tabindex="-1"></a>mB <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_age,            <span class="at">data =</span> kidiq)</span>
+<span id="cb241-3"><a href="#cb241-3" aria-hidden="true" tabindex="-1"></a>mC <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_work,           <span class="at">data =</span> kidiq)</span>
+<span id="cb241-4"><a href="#cb241-4" aria-hidden="true" tabindex="-1"></a>mD <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs <span class="sc">+</span> mom_age <span class="sc">+</span> mom_work, <span class="at">data =</span> kidiq)</span>
+<span id="cb241-5"><a href="#cb241-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb241-6"><a href="#cb241-6" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mA, mB, mC, mD)</span>
+<span id="cb241-7"><a href="#cb241-7" aria-hidden="true" tabindex="-1"></a>tab<span class="sc">$</span>delta <span class="ot">&lt;-</span> tab<span class="sc">$</span>AIC <span class="sc">-</span> <span class="fu">min</span>(tab<span class="sc">$</span>AIC)</span>
+<span id="cb241-8"><a href="#cb241-8" aria-hidden="true" tabindex="-1"></a>tab<span class="sc">$</span>w     <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="sc">-</span>tab<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="fu">sum</span>(<span class="fu">exp</span>(<span class="sc">-</span>tab<span class="sc">$</span>delta <span class="sc">/</span> <span class="dv">2</span>))</span>
+<span id="cb241-9"><a href="#cb241-9" aria-hidden="true" tabindex="-1"></a>tab[<span class="fu">order</span>(tab<span class="sc">$</span>AIC), ]</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   df      AIC     delta          w
 mA  5 3745.086 0.0000000 0.49239740
@@ -3414,8 +3379,8 @@ mD  9 3748.970 3.8839180 0.07062097</code></pre>
 </div>
 <p>Il modello più semplice <code>mA</code> resta il preferito (<span class="math inline">\(w \approx 0.49\)</span>), seguito da <code>mB</code> (<span class="math inline">\(\Delta \approx 0.8\)</span>): un delta sotto 2 indica che i due modelli sono sostanzialmente equivalenti, e in questi casi conviene la <strong>parsimonia</strong>. Né l’età né la condizione lavorativa della madre migliorano la capacità predittiva abbastanza da giustificare i parametri aggiuntivi.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb245"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb245-1"><a href="#cb245-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>))</span>
-<span id="cb245-2"><a href="#cb245-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mA)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb243"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb243-1"><a href="#cb243-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>))</span>
+<span id="cb243-2"><a href="#cb243-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mA)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -3423,10 +3388,10 @@ mD  9 3748.970 3.8839180 0.07062097</code></pre>
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb246"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb246-1"><a href="#cb246-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb244"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb244-1"><a href="#cb244-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb247"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb247-1"><a href="#cb247-1" aria-hidden="true" tabindex="-1"></a><span class="fu">check_predictions</span>(mA)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb245"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb245-1"><a href="#cb245-1" aria-hidden="true" tabindex="-1"></a><span class="fu">check_predictions</span>(mA)</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -3470,7 +3435,7 @@ mD  9 3748.970 3.8839180 0.07062097</code></pre>
 <li><strong>MuMIn</strong> (Bartoń, 2020) — selezione di modelli.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb248"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb248-1"><a href="#cb248-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb246"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb246-1"><a href="#cb246-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.4.2 (2024-10-31)
 Platform: aarch64-apple-darwin20
@@ -3593,7 +3558,7 @@ loaded via a namespace (and not attached):
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp('/' + window.location.host + '/');
+        var filterRegex = new RegExp("https:\/\/mar-cald\.github\.io\/psqt\/");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
