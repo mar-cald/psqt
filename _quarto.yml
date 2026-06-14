@@ -1,0 +1,42 @@
+project:
+  type: website
+  resources:
+    - dati/
+
+lang: it
+
+website:
+  title: ""
+  navbar:
+    background: primary
+    left:
+      - href: index.qmd
+        text: "Home"
+      - href: modelli-lineari.qmd
+        text: "LM"
+      - href: bayes.qmd
+        text: "Bayes"
+  page-footer:
+    center: "PSQT - FISPPA - UNIPD"
+
+format:
+  html:
+    theme: lumen
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    toc-title: "Contenuti"
+    code-copy: true
+    fig-align: center
+    fig-width: 7
+    fig-height: 4.5
+    link-external-newwindow: true
+    grid:
+      body-width: 1000px
+      sidebar-width: 250px
+      margin-width: 200px
+
+execute:
+  freeze: auto
+  warning: false
+  message: false

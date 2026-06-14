@@ -1,0 +1,44 @@
+---
+title: "Master in Psicologia quantitativa, Materiali anno 2025/2026"
+subtitle: "Università degli Studi di Padova - Dipartimento di Filosofia, Sociologia, Pedagogia e Psicologia Applicata"
+toc: false
+---
+
+::: {.callout-note icon=false title="ℹ️ Informazioni"}
+**Docente:** Margherita Calderan, Ph.D.
+
+**email:** margherita.calderan@unipd.it
+
+**sito personale:** [mar-cald.github.io](mar-cald.github.io)
+:::
+
+## La dispensa
+
+Il materiale didattico delle lezioni è raccolto in documenti, pensati per essere letti scorrendo dall'inizio alla fine. Contiene la teoria, il codice R commentato e una serie di **esercizi svolti** (con soluzione nascosta: provate prima da soli!).
+
+→ **[Modelli lineari](modelli-lineari.qmd)**
+
+→ **[Introduzione alla statistica Bayesiana](bayes.qmd)**
+
+
+## Materiale aggiuntivo
+
+### Libri consigliati
+
+- Gelman, A., Hill, J., Vehtari, A. (2020). *Regression and Other Stories*. Cambridge University Press. <!-- link -->
+- Fox, J. (1997). *Applied Regression Analysis, Linear Models, and Related Methods*. SAGE.
+- Fox, J. (2002). *An R and S-Plus Companion to Applied Regression*. SAGE.
+- McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (2nd ed.). Chapman and Hall/CRC. https://doi.org/10.1201/9780429029608
+
+In italiano:
+
+- Bortot, P., Ventura, L., Salvan, A. (2000). *Inferenza Statistica: Applicazioni con S-PLUS e R*. Cedam, Padova.
+- Grigoletto, M., Ventura, L., Pauli, F. (2017). *Modello lineare. Teoria e applicazioni con R*. Giappichelli, Torino.
+- Pastore, M. (2015). *Analisi dei dati in psicologia (con applicazioni in R)*. Il Mulino, Bologna.
+
+### Articoli utili
+
+<!-- Aggiungi qui i link ai pdf o alle pagine degli articoli -->
+
+- Wagenmakers, E.-J., Farrell, S. (2004). AIC model selection using Akaike weights. *Psychonomic Bulletin & Review*, 11, 192–196. <!-- link -->
+- Burnham, K. P., Anderson, D. R. (2002). *Model Selection and Multimodel Inference*. Springer. <!-- link -->
