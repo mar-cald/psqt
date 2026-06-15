@@ -10,7 +10,7 @@ number-sections: true
 ::: {.callout-tip icon=false title="📌 Come usare questa dispensa"}
 Questo documento raccoglie tutto il materiale della lezione. Parte del materiale didattico è stato adattato dalle slide del Prof. [Massimiliano Pastore](https://dpss.psy.unipd.it/~massimiliano.pastore/index.html) (a.a. 2024/2025).
 
-Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a risolverli da soli prima di aprire la soluzione (riquadri verdi, chiusi di default).
+Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a risolverli da soli prima di aprire la soluzione.
 
 Prima di iniziare:
 
@@ -317,15 +317,11 @@ text(xe[i] + 0.2, (ye[i] + fitted(me)[i]) / 2,
      expression(epsilon[i]), col = "red", pos = 4)
 ```
 
-Ogni segmento rosso è un errore $\epsilon_i = y_i - (\beta_0 + \beta_1 x_i)$: di
-quanto il dato osservato si discosta dal valore atteso sulla retta. (A rigore
-l'errore si misura dalla retta *vera*; quando la retta viene *stimata* dai dati,
-quella distanza si chiama **residuo** — è la stessa idea, e la calcoleremo nella
+Ogni segmento rosso è un errore: di quanto il dato osservato si discosta dal valore atteso sulla retta. (A rigore
+l'errore si misura dalla retta *vera*; quando la retta viene *stimata* dai dati, quella distanza si chiama **residuo** — è la stessa idea, e la calcoleremo nella
 @sec-scarti.)
 
-Le cinque assunzioni dicono, ciascuna, qualcosa su **come devono comportarsi
-questi segmenti**. Accanto a ognuna trovate un grafico con dati simulati: a
-sinistra l'assunzione rispettata, a destra violata. 
+Le cinque assunzioni dicono, ciascuna, qualcosa su **come devono comportarsi questi segmenti**. Accanto a ognuna trovate un grafico con dati simulati: a sinistra l'assunzione rispettata, a destra violata. 
 
 **1. Indipendenza tra $X$ ed errore.** La variabile $X$ e l'errore sono
 indipendenti nella popolazione: i predittori non contengono informazione
@@ -448,7 +444,7 @@ abline(lm(y_etero ~ x), col = "red", lwd = 2)
 par(mfrow = c(1, 1))
 ```
 
-A sinistra la dispersione dei punti attorno alla retta è la stessa lungo tutto l'asse $X$; a destra cresce al crescere di $X$: è la tipica **forma a imbuto** dell'eteroschedasticità.
+A sinistra la dispersione dei punti attorno alla retta è la stessa lungo tutto l'asse $X$; a destra cresce al crescere di $X$: è la tipica forma a imbuto dell'**eteroschedasticità**.
 
 **5. Normalità.** Gli errori si distribuiscono normalmente:
 $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$.
@@ -503,11 +499,8 @@ $$
 Y = \beta_0 + \sum_{j=1}^{k-1} \beta_j D_j + \epsilon
 $$
 
-dove le $D_j$ sono **variabili dummy**: nuove colonne, costruite dalla variabile
-categoriale, che valgono **1** se l'osservazione appartiene a una certa categoria
-e **0** altrimenti. Una categoria — detta **di riferimento** — non riceve una
-colonna propria: corrisponde a *tutte le dummy uguali a 0*. Ecco perché per $k$
-categorie bastano $k-1$ dummy.
+dove le $D_j$ sono **variabili dummy**: "nuove variabili", costruite dalla variabile categoriale, che valgono **1** se l'osservazione appartiene a una certa categoria
+e **0** altrimenti. 
 
 Concretamente, è così che R ricodifica un `factor`:
 
@@ -705,7 +698,11 @@ contrasts(df$tipo)
 coef(lm(y_sim ~ tipo, data = df))
 ```
 
+
 Che cosa rappresentano i due coefficienti, secondo voi? 
+
+
+
 
 $$
 \begin{aligned}
@@ -981,6 +978,10 @@ Il parametro $\sigma$ esprime la variabilità dei residui (@sec-normale).
 ```{r}
 #| label: sigma-m1
 sigma(m1)
+er <- residuals(m1)
+sd(er)
+# n -  k - 1 (obs, parametri) = 432 df
+sqrt((sum((er-mean(er))^2))/(length(er)-1-1))
 ```
 
 Nel modello `m1`, $\sigma \approx 18$ significa che il modello predice il punteggio del bambino con un'accuratezza media di circa 18 punti: di tanto, in media, i punteggi osservati si discostano da quelli attesi. 
@@ -1355,7 +1356,10 @@ $$
 \beta_1 = \frac{\sum_i (x_i - \bar{x})(y_i - \bar{y})}{\sum_i (x_i - \bar{x})^2}
 $$
 
-cioè la covarianza tra $x$ e $y$ divisa per la varianza di $x$.
+cioè la **codevianza** di $x$ e $y$ (la somma dei prodotti degli scarti) divisa per
+la **devianza** di $x$. Equivalentemente è la covarianza divisa per la varianza: i
+fattori $1/(n-1)$ di entrambe si semplificano, e resta il rapporto tra le due
+somme.
 
 ```{r}
 #| label: ols-formule
@@ -1562,10 +1566,7 @@ La lettura guidata, voce per voce:
   quantifica la variabilità. È l'incertezza che genera la **banda di
   confidenza** vista nella @sec-bande.
 - **`t value` e `Pr(>|t|)`**: la statistica $t$ (stima / errore standard) e il
-  relativo p-value per l'ipotesi nulla $\beta = 0$, calcolato sulla
-  distribuzione $t$ con i gradi di libertà residui (il box nella @sec-bande
-  spiega da dove arriva la $t$). Qui il test su `mom_iq` è
-  significativo.
+  relativo p-value per l'ipotesi nulla $\beta = 0$, calcolato sulla distribuzione $t$. Qui il test su `mom_iq` è significativo. Cosa significa?
 - **`Residual standard error`** ($\sigma$): è — quasi — la deviazione standard
   dei residui: l'unica differenza è che al denominatore, al posto di $n - 1$, ci
   sono i **gradi di libertà residui** $n - k - 1$, dove $k$ è il numero di
@@ -1583,9 +1584,7 @@ La lettura guidata, voce per voce:
   due valori quasi coincidono.
 - **`F-statistic`**: il test **globale** del modello contro il modello nullo
   (solo intercetta): ipotesi nulla "tutti i coefficienti, intercetta esclusa,
-  sono zero", alternativa "almeno uno è diverso da zero". Serve da controllo
-  d'insieme prima di guardare i singoli test $t$: facendo molti test, qualche
-  p-value piccolo può saltare fuori anche solo per caso.
+  sono zero", alternativa "almeno uno è diverso da zero". 
 
 
 
@@ -1680,9 +1679,7 @@ predict(m_age, newdata = data.frame(mom_age = c(20, 30)))
 ```
 
 d. $R^2 \approx 0.009$: l'età della madre spiega meno dell'1% della variabilità dei
-   punteggi. La pendenza è positiva ma il predittore, da solo, è debolissimo —
-   un buon promemoria del fatto che un coefficiente "significativo o quasi" non
-   implica un modello *utile*.
+   punteggi. La pendenza è positiva ma il predittore, da solo, è debolissimo.
 :::
 
 ::: {.callout-note icon=false title="✏️ Esercizio 5 — Intervalli di confidenza"}
@@ -1699,9 +1696,7 @@ confint(m1)
 
 L'intervallo per `mom_iq` va da circa 0.50 a 0.73: i dati sono compatibili con un
 effetto del QI della madre compreso tra mezzo punto e tre quarti di punto per ogni
-punto di QI. Lo zero è ben lontano dall'intervallo, coerentemente con il p-value
-piccolissimo visto nel `summary()`. Notate quanto è più informativo dell'enunciato
-"p < .05": l'intervallo ci dice *quanto grande* è plausibilmente l'effetto.
+punto di QI. 
 :::
 
 ## La diagnostica grafica {#sec-diagnostica}
@@ -1852,20 +1847,53 @@ pendenza (0.56), intercette diverse (25.73 per le madri non diplomate, $25.73 +
 5.95 = 31.68$ per le diplomate):
 
 ```{r}
-#| label: m3-plot
-library(ggplot2)
+#| label: m3-marginali
+#| fig-height: 5
+#| fig-width: 6.5
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+g    <- kidiq$mom_hs
+cols <- c("#F8766D", "#00BFC4")          # non diplomata, diplomata
+xr   <- range(kidiq$mom_iq)
+yr   <- range(kidiq$kid_score)
+dx <- lapply(levels(g), function(l) density(kidiq$mom_iq[g == l]))
+dy <- lapply(levels(g), function(l) density(kidiq$kid_score[g == l]))
+
+layout(matrix(c(2, 4, 1, 3), 2, 2, byrow = TRUE),
+       widths = c(4, 1.2), heights = c(1.2, 4))
+
+# 1 — scatter dei dati + le due rette parallele di m3
+par(mar = c(4, 4, 0.5, 0.5))
+plot(kidiq$mom_iq, kidiq$kid_score, pch = 19, col = adjustcolor(cols[g], 0.3),
+     xlim = xr, ylim = yr, xlab = "QI della madre", ylab = "Punteggio del bambino")
 cf <- coef(m3)
-ggplot(kidiq, aes(x = mom_iq, y = kid_score, colour = mom_hs)) +
-  geom_point(alpha = 0.5) +
-  geom_abline(intercept = cf[1],         slope = cf[2], colour = "#F8766D", linewidth = 1) +
-  geom_abline(intercept = cf[1] + cf[3], slope = cf[2], colour = "#00BFC4", linewidth = 1) +
-  labs(x = "QI della madre", y = "Punteggio del bambino", colour = "Diploma")
+abline(cf[1],         cf[2], col = cols[1], lwd = 3)
+abline(cf[1] + cf[3], cf[2], col = cols[2], lwd = 3)
+
+# 2 — distribuzione del QI (in alto), per gruppo
+par(mar = c(0, 4, 0.5, 0.5))
+plot(NA, xlim = xr, ylim = c(0, max(sapply(dx, function(d) max(d$y)))),
+     axes = FALSE, xlab = "", ylab = "")
+for (i in 1:2) polygon(dx[[i]], col = adjustcolor(cols[i], 0.4), border = cols[i])
+
+# 3 — distribuzione del punteggio (a destra), per gruppo: densità ruotata
+par(mar = c(4, 0, 0.5, 0.5))
+plot(NA, ylim = yr, xlim = c(0, max(sapply(dy, function(d) max(d$y)))),
+     axes = FALSE, xlab = "", ylab = "")
+for (i in 1:2) polygon(dy[[i]]$y, dy[[i]]$x, col = adjustcolor(cols[i], 0.4), border = cols[i])
+
+# 4 — legenda
+par(mar = c(0, 0, 0, 0)); plot.new()
+legend("center", fill = adjustcolor(cols, 0.5), border = cols, bty = "n",
+       legend = c("non diplomata", "diplomata"))
+layout(1)
 ```
 
-L'interpretazione dei coefficienti cambia in modo sottile ma importante: ogni
-coefficiente esprime l'effetto di quel predittore **a parità degli altri**.
-Ad esempio, $\beta_1 = 0.56$ è l'effetto del QI della madre *a parità di livello di
-istruzione*.
+Sui margini si leggono le distribuzioni dei due gruppi: le madri diplomate
+(azzurro) hanno QI tendenzialmente più alti (margine in alto) e figli con punteggi
+più alti (margine a destra). 
+Ogni coefficiente esprime l'effetto di quel predittore **a parità degli altri**.
+Ad esempio, $\beta_1 = 0.56$ è l'effetto del QI della madre *a parità di livello di istruzione*.
 
 ## L'analisi degli effetti
 
@@ -1908,7 +1936,7 @@ dedicati. Con **sjPlot**:
 #| label: m3-sjplot
 #| layout-ncol: 2
 library(sjPlot)
-plot_model(m3, type = "eff", terms = "mom_iq")
+plot_model(m3, type = "eff", terms = "mom_iq", show.data = TRUE)
 plot_model(m3, type = "eff", terms = "mom_hs")
 ```
 
@@ -1922,7 +1950,9 @@ plot(allEffects(m3))
 ```
 
 Entrambi mostrano l'effetto di ciascun predittore *tenendo gli altri fissi* (ai
-loro valori medi o di riferimento), con le relative bande di confidenza.
+loro valori medi), con le relative bande di confidenza.
+
+
 
 ::: {.callout-note icon=false title="✏️ Esercizio 7 — Regressione multipla"}
 Stimate un modello con `mom_iq` e `mom_age` come predittori di `kid_score`.
@@ -1982,23 +2012,62 @@ $$
 Il termine $DX$ (prodotto tra dummy e QI) permette alle due rette di avere
 **pendenze diverse**:
 
+
 ```{r}
-#| label: m4-plot
-ggplot(kidiq, aes(x = mom_iq, y = kid_score, colour = mom_hs)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(x = "QI della madre", y = "Punteggio del bambino", colour = "Diploma")
+#| label: m4-marginali
+#| fig-height: 5
+#| fig-width: 6.5
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+g    <- kidiq$mom_hs
+cols <- c("#F8766D", "#00BFC4")          # non diplomata, diplomata
+xr   <- range(kidiq$mom_iq)
+yr   <- range(kidiq$kid_score)
+dx <- lapply(levels(g), function(l) density(kidiq$mom_iq[g == l]))
+dy <- lapply(levels(g), function(l) density(kidiq$kid_score[g == l]))
+
+layout(matrix(c(2, 4, 1, 3), 2, 2, byrow = TRUE),
+       widths = c(4, 1.2), heights = c(1.2, 4))
+
+# 1 — scatter + le due rette di m4 (pendenze diverse)
+par(mar = c(4, 4, 0.5, 0.5))
+plot(kidiq$mom_iq, kidiq$kid_score, pch = 19, col = adjustcolor(cols[g], 0.3),
+     xlim = xr, ylim = yr, xlab = "QI della madre", ylab = "Punteggio del bambino")
+cf <- coef(m4)
+abline(cf[1],         cf[2],  col = cols[1], lwd = 3)   # non dipl. (D = 0)
+abline(cf[1] + cf[3], cf[2] + cf[4],  col = cols[2], lwd = 3)   # dipl.     (D = 1)
+
+# 2 — distribuzione del QI (in alto), per gruppo
+par(mar = c(0, 4, 0.5, 0.5))
+plot(NA, xlim = xr, ylim = c(0, max(sapply(dx, function(d) max(d$y)))),
+     axes = FALSE, xlab = "", ylab = "")
+for (i in 1:2) polygon(dx[[i]], col = adjustcolor(cols[i], 0.4), border = cols[i])
+
+# 3 — distribuzione del punteggio (a destra), per gruppo: densità ruotata
+par(mar = c(4, 0, 0.5, 0.5))
+plot(NA, ylim = yr, xlim = c(0, max(sapply(dy, function(d) max(d$y)))),
+     axes = FALSE, xlab = "", ylab = "")
+for (i in 1:2) polygon(dy[[i]]$y, dy[[i]]$x, col = adjustcolor(cols[i], 0.4), border = cols[i])
+
+# 4 — legenda
+par(mar = c(0, 0, 0, 0)); plot.new()
+legend("center", fill = adjustcolor(cols, 0.5), border = cols, bty = "n",
+       legend = c("non diplomata", "diplomata"))
+layout(1)
 ```
+
 
 Sostituendo i valori di $D$ si ottengono le equazioni delle due rette:
 
 - madri non diplomate ($D = 0$): $\hat{Y} = -11.48 + 0.97 X$
 - madri diplomate ($D = 1$): $\hat{Y} = (-11.48 + 51.27) + (0.97 - 0.48) X = 39.79 + 0.49 X$
 
+
 L'interpretazione: tra le madri non diplomate il QI "pesa" molto di più (quasi un
 punto per punto di QI), mentre tra le diplomate la relazione è circa la metà. Con
 un'interazione, gli effetti principali **non si interpretano più da soli**:
 l'effetto di un predittore dipende dal livello dell'altro.
+
 
 ## L'analisi degli effetti
 
@@ -2027,6 +2096,7 @@ Con **effects**:
 #| fig-height: 4
 plot(allEffects(m4))
 ```
+
 
 ::: {.callout-note icon=false title="✏️ Esercizio 8 — Interpretare un'interazione"}
 Usando i coefficienti di `m4` (senza usare `predict()`, prima):
@@ -2069,7 +2139,7 @@ d. **Quando si incrociano le due rette?** Scriviamole con i coefficienti del
 
 ## Casi anomali e casi influenti {#sec-anomali}
 
-Non tutte le osservazioni "strane" sono uguali. Conviene distinguere:
+Non tutte le osservazioni "strane" sono uguali. 
 
 - **outlier**: un'osservazione con $Y$ anomalo rispetto a ciò che il modello
   prevede per il suo $X$ (residuo grande);
@@ -2329,53 +2399,6 @@ logLik(m1)
 Identiche. (Unica accortezza: la stima di massima verosimiglianza di $\sigma$ usa
 $n$ al denominatore, non gli $n - k - 1$ del *Residual standard error* — perché?)
 
-::: {.callout-note collapse="true"}
-## Perché due denominatori diversi per la stessa $\sigma$?
-
-Sono due stimatori diversi: $\hat\sigma^2_{\text{ML}} = \text{SS}_E/n$ (massima
-verosimiglianza) e $\hat\sigma^2 = \text{SS}_E/(n-k-1)$ (*Residual standard error*).
-
-**Perché differiscono.** La retta di `lm()` è quella che *minimizza* $\text{SS}_E$:
-si incolla a *questo* campione meglio della retta vera. Quindi i residui sono
-sistematicamente più piccoli dei veri errori, e $\text{SS}_E/n$ **sottostima**
-$\sigma^2$. L'esempio estremo: con una regressione semplice e **solo 2 punti** la
-retta ci passa esattamente sopra, $\text{SS}_E = 0$, e $\text{SS}_E/n = 0$ direbbe
-"errore nullo" — assurdo (con 2 punti non sai nulla sulla dispersione attorno alla
-retta). Dividendo per $n-k-1 = 0$ si ottiene $0/0$, indefinito: la risposta giusta,
-"non stimabile".
-
-**La correzione.** In media $E[\text{SS}_E] = (n-k-1)\,\sigma^2$, quindi
-$\text{SS}_E/(n-k-1)$ è **non distorto**, mentre $\text{SS}_E/n$ è troppo piccolo
-del fattore $(n-k-1)/n$. Quel $n-k-1$ sono i **gradi di libertà residui**: i
-residui obbediscono a $k+1$ vincoli (le equazioni normali), quindi solo $n-k-1$
-sono liberi — esattamente come la varianza campionaria divide per $n-1$, avendo
-speso un grado di libertà per stimare la media.
-
-**Perché allora la verosimiglianza usa $n$?** Perché la massima verosimiglianza
-cerca il valore che rende più probabili i dati: il massimo rispetto a $\sigma^2$
-cade *esattamente* in $\text{SS}_E/n$ — non è pensata per essere non distorta. Per
-questo `logLik()`, AIC e BIC usano $n$, mentre `summary()` (Residual standard
-error), errori standard, test $t$ e bande usano $n-k-1$. Con $n$ grande la
-differenza è trascurabile (qui 434 contro 432).
-
-Verifichiamolo: simuliamo tanti campioni con $\sigma$ noto e confrontiamo le medie
-delle due stime.
-
-```{r}
-#| label: ml-vs-corretta
-set.seed(1)
-stime <- replicate(5000, {
-  x <- 1:8                                  # n = 8, un predittore (k = 1)
-  y <- 2 + 0.5 * x + rnorm(8, 0, sd = 4)    # sigma vero = 4, quindi sigma^2 = 16
-  e <- residuals(lm(y ~ x))
-  c(ML = sum(e^2) / 8, corretta = sum(e^2) / (8 - 1 - 1))   # /n   vs   /(n-k-1)
-})
-rowMeans(stime)        # media delle stime di sigma^2 (vero = 16)
-```
-
-La stima ML centra in media un valore *più basso* del vero $\sigma^2 = 16$ (circa
-$16 \times 6/8 = 12$), mentre quella corretta lo centra in pieno.
-:::
 
 ::: {.callout-important}
 **L'assunzione di normalità non è un
