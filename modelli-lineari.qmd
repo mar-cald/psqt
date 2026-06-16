@@ -8,7 +8,7 @@ number-sections: true
 ---
 
 ::: {.callout-tip icon=false title="📌 Come usare questa dispensa"}
-Questo documento raccoglie tutto il materiale della lezione. Parte del materiale didattico è stato adattato dalle slide del Prof. [Massimiliano Pastore](https://dpss.psy.unipd.it/~massimiliano.pastore/index.html) (a.a. 2024/2025).
+Questo documento raccoglie tutto il materiale della lezione. Parte del materiale didattico è stato adattato dalle slide del Prof. [Massimiliano Pastore](https://dpss.psy.unipd.it/~massimiliano.pastore/index.html) (a.a. 2024/2025). Ps. Eventuali errori sono da attribuire alla sottoscritta (ovviamente).
 
 Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a risolverli da soli prima di aprire la soluzione.
 
@@ -961,10 +961,7 @@ round(residuals(mod), 3)
 
 **I residui sono una misura di cosa?**
 
-```{r}
-#| label: residui-sd
-round(sd(residuals(mod)), 3)
-```
+
 
 
 ### La variabilità residua: $\sigma$
@@ -1613,6 +1610,42 @@ c'era in partenza (la devianza totale) e quanta ne resta dopo il modello (la
 devianza residua): `summary()` non fa che ricombinare le devianze della
 @sec-devianze.
 
+::: {.callout-tip collapse="true"}
+## Perché si divide per $k$ e per $n-k-1$? (i gradi di libertà)
+
+**I gradi di libertà:** Il numero di pezzi di informazione *davvero
+indipendenti* che entrano in un calcolo. 
+
+Esempio noto: la varianza campionaria
+divide per $n-1$, non per $n$, perché per calcolare gli scarti $y_i - \bar y$ hai
+prima stimato $\bar y$ *dagli stessi dati*; noti $\bar y$ e $n-1$ scarti, l'ultimo
+è determinato (gli scarti sommano a zero). Regola generale: **ogni parametro
+stimato dai dati consuma un grado di libertà.**
+
+La devianza spiegata $\text{SS}_R$ vive nelle $k$
+"direzioni" aggiunte dai $k$ predittori (le pendenze, oltre l'intercetta): ha $k$
+gradi di libertà. $\text{SS}_R/k$ è la variabilità spiegata *per predittore*.
+
+I residui partono da $n$ dati, ma per ottenere
+i previsti $\hat y$ hai stimato $k+1$ parametri (le $k$ pendenze **più**
+l'intercetta). Ogni parametro è un
+vincolo sui residui: restano $n-k-1$ informazioni libere. $\text{SS}_E/(n-k-1)$ è
+la varianza residua $\hat\sigma^2$.
+
+
+I gradi di libertà si spezzano esattamente come le devianze:
+$$
+\underbrace{(n-1)}_{\text{totale}} = \underbrace{k}_{\text{regressione}} + \underbrace{(n-k-1)}_{\text{residua}},
+$$
+lo stesso schema di $\text{SS}_T = \text{SS}_R + \text{SS}_E$.
+
+Così $\text{SS}_E/(n-k-1)$ è una stima **non distorta** di $\sigma^2$ (dividere per $n$
+la sottostimerebbe: i residui sono resi artificialmente piccoli dall'adattamento).
+Sotto l'ipotesi nulla anche il numeratore stima $\sigma^2$ → $F \approx 1$; se il
+modello spiega davvero, il numeratore si gonfia mentre il denominatore resta una
+stima onesta del rumore → $F$ grande.
+:::
+
 
 ::: {.callout-note icon=false title="✏️ Prova tu — I p-value con pt() e pf()"}
 Manca solo un pezzo: i **p-value**. Anche quelli si ricalcolano a mano, con le funzioni di ripartizione `pt()` e `pf()`.
@@ -1638,16 +1671,12 @@ pf(108.6, df1 = 1, df2 = 432, lower.tail = FALSE)      # c: una coda sola
 c(t2 = 10.42^2, F = 108.6)                             # d: con k = 1, F = t²
 ```
 
-a–b. I p-value coincidono con quelli del `summary()` (4.36 dà 1.63e-05 — con
-la normale sarebbe stato 1.3e-05: sono le code più pesanti della $t$ all'opera;
-per 10.42 il valore è così piccolo che R lo riporta come `< 2.2e-16`, il limite
-della precisione di stampa).
+a–b. I p-value coincidono con quelli del `summary()`.
 c. **Una coda sola**: la $F$ è un rapporto di varianze, sempre positivo, e solo
 valori grandi sono evidenza contro $H_0$.
 d. Con un solo predittore l'ipotesi globale "tutti i coefficienti sono zero" e
 l'ipotesi sul singolo coefficiente sono la stessa ipotesi: $F = t^2$ e i due
-p-value coincidono (a meno degli arrotondamenti di $t$ e $F$ letti
-dall'output).
+p-value coincidono.
 :::
 
 ::: {.callout-note icon=false title="✏️ Esercizio 4 — La vostra prima regressione"}
@@ -1733,6 +1762,7 @@ diplomata):
 
 ```{r}
 #| label: m2-boxplot
+
 m2 <- lm(kid_score ~ mom_hs, data = kidiq)
 
 plot(kid_score ~ mom_hs, data = kidiq,
@@ -1752,8 +1782,7 @@ $$
 \hat{Y} = 77.55 + 11.77 D
 $$
 
-L'interpretazione, con una dummy, è in termini di **medie di gruppo** (è
-esattamente la logica vista in @sec-codifica):
+L'interpretazione, con una dummy, è in termini di **medie di gruppo** (cfr. @sec-codifica):
 
 - $\beta_0 = 77.55$: punteggio medio previsto quando $D = 0$, cioè la media dei
   bambini con madre **non** diplomata;
@@ -1897,6 +1926,11 @@ Ad esempio, $\beta_1 = 0.56$ è l'effetto del QI della madre *a parità di livel
 
 ## L'analisi degli effetti
 
+```{r}
+#| label: m3-summary
+summary(m3)
+```
+
 Con `anova()` otteniamo la scomposizione della variabilità spiegata dai singoli
 effetti del modello:
 
@@ -1930,7 +1964,9 @@ entrato dopo il QI, aggiunge poco più di un punto percentuale.
 ## La rappresentazione grafica degli effetti
 
 Per visualizzare gli effetti stimati dal modello esistono comodi pacchetti
-dedicati. Con **sjPlot**:
+dedicati. 
+
+- **sjPlot**:
 
 ```{r}
 #| label: m3-sjplot
@@ -1940,7 +1976,15 @@ plot_model(m3, type = "eff", terms = "mom_iq", show.data = TRUE)
 plot_model(m3, type = "eff", terms = "mom_hs")
 ```
 
-Con **effects**:
+```{r}
+# tabella da esportare
+tab_model(m3)
+```
+
+
+
+
+- **effects**:
 
 ```{r}
 #| label: m3-effects
@@ -2053,7 +2097,6 @@ for (i in 1:2) polygon(dy[[i]]$y, dy[[i]]$x, col = adjustcolor(cols[i], 0.4), bo
 par(mar = c(0, 0, 0, 0)); plot.new()
 legend("center", fill = adjustcolor(cols, 0.5), border = cols, bty = "n",
        legend = c("non diplomata", "diplomata"))
-layout(1)
 ```
 
 
@@ -2073,12 +2116,21 @@ l'effetto di un predittore dipende dal livello dell'altro.
 
 ```{r}
 #| label: m4-anova
-anova(m4)
+a <- anova(m4); a
+SST <- sum(a$`Sum Sq`)
+SSE <- a$`Sum Sq`[4]
+R2 <- 1-(SSE/SST); R2
 summary(m4)$r.squared
 ```
 
 Anche l'interazione risulta significativa, e il modello spiega circa il 23% della
 variabilità.
+
+```{r}
+eta2 <- a$"Sum Sq" / sum(a$"Sum Sq")
+data.frame(effetto = rownames(a), eta2 = round(eta2, 3))
+```
+
 
 ## La rappresentazione grafica
 
@@ -2181,7 +2233,7 @@ par(mfrow = c(1, 1))
 - l'**outlier** con $X$ centrale sposta un po' l'intercetta ma quasi per niente la
   pendenza;
 - il caso a **leva alta** ma coerente con la retta non cambia;
-- l'**outlier influente** (X estremo + Y anomalo) ruota vistosamente la retta: è questo il caso davvero pericoloso.
+- l'**outlier influente** (X estremo + Y anomalo) ruota vistosamente la retta.
 
 Un modo diretto di *vedere* l'influenza è il **leave-one-out**: si rifà la
 regressione togliendo un'osservazione per volta e si guarda quanto si sposta la
@@ -2340,18 +2392,16 @@ La curva ha un massimo, e il massimo cade esattamente sulla **media campionaria*
 (linea rossa tratteggiata): tra tutte le normali candidate, quella centrata su
 $\bar{y}$ è la più compatibile con i dati osservati.
 
-::: {.callout-note}
+::: {.callout-important}
 Attenzione alla direzione: la verosimiglianza misura quanto sono plausibili **i
 dati** dato un valore dei parametri, non quanto è probabile **un parametro** dati
-i dati. Per questo $\mathcal{L}(\mu)$ non è una distribuzione di probabilità (non
-integra a 1): è una funzione che *ordina* i valori dei parametri per
-compatibilità con il campione.
+i dati. Per questo $\mathcal{L}(\mu)$ non è una distribuzione di probabilità: è una funzione che *ordina* i valori dei parametri per compatibilità con il campione.
 :::
 
 ## A che cosa serve
 
-1. **Ottimizzare.** Cercare il valore dei parametri che la massimizza: è la
-   **stima di massima verosimiglianza** (*Maximum Likelihood Estimation*, MLE),
+1. **Ottimizzare.** Cercare il valore dei parametri che la massimizza: è il
+   **metodo di massima verosimiglianza** (*Maximum Likelihood Estimation*, MLE),
    uno dei metodi di stima più usati.
 2. **Confrontare modelli.** Modelli diversi assegnano agli stessi dati
    verosimiglianze diverse: confrontarle ci dice quale modello "spiega" meglio i
@@ -2373,17 +2423,9 @@ allora il prodotto di quelle densità normali:
 
 $$
 \mathcal{L}(\beta_0, \beta_1, \sigma^2) = \prod_i f(y_i \mid \mu_i, \sigma^2)
-\qquad\Rightarrow\qquad
-\log\mathcal{L} = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{\sum_i (y_i - \mu_i)^2}{2\sigma^2}
 $$
 
-Guardate il numeratore dell'ultimo termine: è la **devianza residua**
-(@sec-devianze). Massimizzare la verosimiglianza rispetto ai $\beta$ significa
-quindi *minimizzare* $\sum_i (y_i - \hat{y}_i)^2$: sotto l'assunzione di
-normalità, **minimi quadrati e massima verosimiglianza scelgono la stessa
-retta**.
-
-Verifichiamolo: ricalcoliamo "a mano" la log-verosimiglianza di `m1` come somma
+Ricalcoliamo "a mano" la log-verosimiglianza di `m1` come somma
 dei log delle densità normali centrate sui valori previsti, e confrontiamola con
 quella che R calcola con `logLik()`:
 
@@ -2393,18 +2435,38 @@ mu_hat   <- fitted(m1)
 sigma_ML <- sqrt(sum(residuals(m1)^2) / length(mu_hat))   # denominatore n!
 
 sum(dnorm(kidiq$kid_score, mean = mu_hat, sd = sigma_ML, log = TRUE))
-logLik(m1)
 ```
 
-Identiche. (Unica accortezza: la stima di massima verosimiglianza di $\sigma$ usa
-$n$ al denominatore, non gli $n - k - 1$ del *Residual standard error* — perché?)
+Ogni osservazione ci mette **un termine**: la
+log-densità del suo punteggio sotto la normale centrata sul *suo* valore previsto.
+Eccone i primi cinque, uno per bambino:
+
+```{r}
+#| label: loglik-contributi
+contributi <- data.frame(
+  mom_iq    = round(kidiq$mom_iq, 1),
+  kid_score = kidiq$kid_score,                # y osservato
+  mu_hat    = round(mu_hat, 1),               # valore previsto (sulla retta)
+  log_dens  = round(dnorm(kidiq$kid_score, mu_hat, sigma_ML, log = TRUE), 2)
+)
+head(contributi, 5)
+```
+
+Ogni riga è un'osservazione: dove il punteggio è vicino al valore previsto
+(`mu_hat`) la `log_dens` è alta. Sommando
+**tutti** i 434 termini, uno per bambino, si ottiene la log-verosimiglianza
+vista sopra.
+
+```{r}
+# funzione R
+logLik(m1) # df = n parametri stimati
+```
 
 
 ::: {.callout-important}
-**L'assunzione di normalità non è un
-dettaglio tecnico — è lei a definire la funzione di verosimiglianza del
+**L'assunzione di normalità definisce la funzione di verosimiglianza del
 modello**. Assumere la normalità significa decidere che i dati vanno valutati
-con campane normali centrate sulla retta: è questa la verosimiglianza che
+con dist. normali centrate sulla retta: è questa la verosimiglianza che
 `logLik()` calcola, e che AIC e BIC useranno nel prossimo capitolo come metro
 di paragone. Cambiare assunzione distribuzionale (per esempio una Poisson per
 dei conteggi) significa cambiare verosimiglianza: è l'idea alla base dei
@@ -2412,12 +2474,12 @@ modelli lineari *generalizzati*.
 :::
 
 ::: {.callout-note icon=false title="✏️ Esercizio 10 — La verosimiglianza all'opera"}
-Usando il campione `y` di questo capitolo (con $\sigma = 1.5$ fissa):
+Usando il campione `y <- c(7.9, 9.4, 10.1, 10.8, 12.3) ` (con $\sigma = 1.5$ fissa):
 
 a. calcolate la log-verosimiglianza per $\mu = 9$, $\mu = 10$ e $\mu = 11$:
    quale ipotesi è più sostenuta dai dati?
 b. cercate il massimo della funzione di verosimiglianza su una griglia fine di
-   valori di $\mu$: coincide con `mean(y)`?
+   valori di $\mu$ (`mu_griglia <- seq(8, 12, by = 0.001`): coincide con `mean(y)`?
 c. ripetete il "calcolo a mano" della log-verosimiglianza per il modello
    `m_age` dell'Esercizio 4 (`kid_score ~ mom_age`) e confrontate con
    `logLik(m_age)`.
@@ -2450,10 +2512,6 @@ c. I due valori coincidono: `logLik()` non fa altro che sommare i log delle
 # Confronto e selezione di modelli
 
 > *All models are wrong, but some are useful.* — George E. P. Box
-
-Lo scopo di un modello statistico è essenzialmente questo: a partire da un insieme
-di dati osservati, identificare il processo latente sottostante che li ha generati.
-L'obiettivo del ricercatore è individuare il modello migliore.
 
 ## I problemi
 
@@ -2591,13 +2649,14 @@ quello della riga **sopra**. Colonna per colonna:
   aggiungendo `mom_iq` al modello nullo: $180386 - 144137 = 36249$.
 - **`F` e `Pr(>F)`** — il test $F$ chiede se quel calo è *più grande di quanto ci
   si aspetterebbe per caso*: confronta la devianza spiegata in più (per parametro
-  aggiunto) con la varianza residua del modello. Un p-value piccolo dice "vale la
-  pena aggiungere quel termine".
+  aggiunto) con la varianza residua usata come "rumore di fondo". Attenzione: con
+  *più* modelli, `anova()` usa come denominatore la varianza residua del **modello più grande** della tabella (l'ultimo), uguale per tutte le righe.
 
-Così la **riga 2** (aggiungere `mom_iq` al nullo) abbatte la devianza di 36249,
-$F$ enorme, $p < 2.2\text{e-}16$: il QI è fortemente predittivo. L'**ultima riga**
-(aggiungere l'interazione) fa calare la devianza di 2878, $p = 0.003$: anche
-l'interazione aggiunge qualcosa di significativo.
+"Modello più grande" significa *con più parametri*, non "modello migliore". Tra modelli annidati il più grande adatta sempre meglio i dati osservati (la `RSS` più piccola) e fornisce la stima meno distorta di
+$\sigma^2$ — ed è per questo che `anova()` lo usa al denominatore — ma proprio
+perché adatta *tutto*, rumore compreso, può **overfittare**: per *scegliere* un
+modello servono criteri che penalizzano la complessità (AIC e BIC, più avanti).
+
 
 ::: {.callout-warning}
 Questo approccio funziona solo per modelli **annidati** (ogni modello deve essere
@@ -2643,8 +2702,7 @@ Sia per AIC sia per BIC il modello preferito è `m4`, quello con l'interazione.
 ## La quantificazione dell'evidenza
 
 Un grande vantaggio di AIC/BIC è la possibilità di stimare la **plausibilità
-relativa** di un modello rispetto a un altro, evitando tutti i problemi associati
-al p-value. Il calcolo dell'**evidenza relativa** (*evidence ratio*) è molto
+relativa** di un modello rispetto a un altro. Il calcolo dell'**evidenza relativa** (*evidence ratio*) è molto
 semplice:
 
 1. sia $\Delta$ la differenza tra i valori di AIC (o BIC) dei due modelli;
@@ -2704,16 +2762,20 @@ barplot(A$w, names.arg = rownames(A), xlab = "modelli", ylab = "peso di Akaike")
 Praticamente tutto il peso va a `m4`: dato questo insieme di modelli, è di gran
 lunga il candidato migliore.
 
-## Il pacchetto MuMIn
-
 Il pacchetto **MuMIn** automatizza l'intera procedura e produce una tabella di
-selezione completa (stime, gradi di libertà, log-verosimiglianza, AIC, delta e
-pesi):
+selezione completa:
 
 ```{r}
 #| label: mumin
 library(MuMIn)
 (AICtable <- model.sel(m0, m1, m2, m3, m4, rank = AIC))
+```
+
+E' possibile anche utilizzare il pacchetto `performance` (usato anche in precedenza per il predictive check cfr. @sec-adattamento)
+```{r}
+performance::compare_performance(m0, m1, m2, m3, m4)
+
+plot(performance::compare_performance(m0, m1, m2, m3, m4))
 ```
 
 E per i confronti a coppie possiamo costruire la matrice delle evidenze relative
@@ -2730,7 +2792,7 @@ Ogni cella riporta il logaritmo dell'evidenza del modello di riga rispetto al
 modello di colonna: valori positivi favoriscono il modello di riga (es. `m4` vs
 `m3`: $\log \ell = 3.5$, cioè $\ell \approx 32$, come calcolato prima).
 
-La stessa matrice si può leggere a colori: celle rosse = il modello di riga è più plausibile di quello di colonna, celle blu = il contrario, diagonale a zero.
+La stessa matrice si può leggere a colori:
 
 ```{r}
 #| label: pairwise-plot
@@ -2741,13 +2803,13 @@ La stessa matrice si può leggere a colori: celle rosse = il modello di riga è 
 logER <- log(ER)
 n <- nrow(logER)
 par(mar = c(4, 4, 3, 1))
-image(1:n, 1:n, t(logER[n:1, ]), col = hcl.colors(25, "Blue-Red 3"),
+image(1:n, 1:n, t(logER[n:1, ]), col = hcl.colors(25, "Magenta", alpha = .8),
       axes = FALSE, xlab = "", ylab = "",
       main = "log evidenza relativa (riga vs colonna)")
 axis(1, at = 1:n, labels = colnames(logER))
 axis(2, at = 1:n, labels = rev(rownames(logER)), las = 1)
 for (i in 1:n) for (j in 1:n)
-  text(j, n + 1 - i, round(logER[i, j], 1), cex = 0.9)
+  text(j, n + 1 - i, round(logER[i, j], 1), cex = 1.2,col = "black")
 box()
 ```
 
@@ -2857,4 +2919,3 @@ sessionInfo()
 
 ---
 
-*Materiale didattico adattato dalle slide del Prof. Massimiliano Pastore.*
