@@ -8,8 +8,6 @@ toc: false
 **Docente:** Margherita Calderan, Ph.D.
 
 **email:** margherita.calderan@unipd.it
-
-**sito personale:** [mar-cald.github.io](mar-cald.github.io)
 :::
 
 ## La dispensa
