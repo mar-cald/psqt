@@ -2334,8 +2334,7 @@ text(y, d + 0.015, round(d, 2), col = "red", cex = 0.8)
 Le cinque densità ci dicono quanto ciascun punto è "plausibile" sotto la
 distribuzione ipotizzata. Ma il campione è uno solo: i punti sono stati osservati
 **insieme**, sono eventi congiunti — e la probabilità di eventi congiunti (e
-indipendenti) si ottiene **moltiplicando**. La **verosimiglianza** del campione
-sotto i parametri $\theta$ è quindi il prodotto delle densità:
+indipendenti) si ottiene **moltiplicando**. 
 
 $$
 \mathcal{L}(\theta) = \prod_i f(y_i \mid \theta)
@@ -2355,8 +2354,7 @@ Tenetela d'occhio: è l'ingrediente di AIC e BIC nel prossimo capitolo.
 ## La funzione di verosimiglianza
 
 Il numero appena calcolato dipende dall'ipotesi che abbiamo fatto ($\mu = 10$).
-Ma potevamo ipotizzare distribuzioni diverse: ciascuna assegna al campione una
-verosimiglianza diversa.
+Ma potevamo ipotizzare distribuzioni diverse: 
 
 ```{r}
 #| label: lik-candidate
@@ -2374,7 +2372,7 @@ legend("topleft", lwd = 2, col = c("black", "blue", "red"), bty = "n", cex = 0.9
 ```
 
 L'idea allora è: proviamo **tutti** i valori candidati di $\mu$ (con $\sigma$
-fissata, per semplicità), calcoliamo la verosimiglianza del campione per
+fissata, per semplicità), calcoliamo la verosimiglianza per
 ciascuno, e disegniamo i risultati. Quella che otteniamo è la **funzione di
 verosimiglianza** $\mathcal{L}(\mu)$:
 
@@ -2392,11 +2390,6 @@ La curva ha un massimo, e il massimo cade esattamente sulla **media campionaria*
 (linea rossa tratteggiata): tra tutte le normali candidate, quella centrata su
 $\bar{y}$ è la più compatibile con i dati osservati.
 
-::: {.callout-important}
-Attenzione alla direzione: la verosimiglianza misura quanto sono plausibili **i
-dati** dato un valore dei parametri, non quanto è probabile **un parametro** dati
-i dati. Per questo $\mathcal{L}(\mu)$ non è una distribuzione di probabilità: è una funzione che *ordina* i valori dei parametri per compatibilità con il campione.
-:::
 
 ## A che cosa serve
 

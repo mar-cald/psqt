@@ -275,7 +275,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Data di Pubblicazione</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">17 giugno 2026</p>
+      <p class="date">26 giugno 2026</p>
     </div>
   </div>
   
@@ -3016,7 +3016,7 @@ Soluzione — Esercizio 8
 </div>
 </div>
 </div>
-<p>Le cinque densità ci dicono quanto ciascun punto è “plausibile” sotto la distribuzione ipotizzata. Ma il campione è uno solo: i punti sono stati osservati <strong>insieme</strong>, sono eventi congiunti — e la probabilità di eventi congiunti (e indipendenti) si ottiene <strong>moltiplicando</strong>. La <strong>verosimiglianza</strong> del campione sotto i parametri <span class="math inline">\(\theta\)</span> è quindi il prodotto delle densità:</p>
+<p>Le cinque densità ci dicono quanto ciascun punto è “plausibile” sotto la distribuzione ipotizzata. Ma il campione è uno solo: i punti sono stati osservati <strong>insieme</strong>, sono eventi congiunti — e la probabilità di eventi congiunti (e indipendenti) si ottiene <strong>moltiplicando</strong>.</p>
 <p><span class="math display">\[
 \mathcal{L}(\theta) = \prod_i f(y_i \mid \theta)
 \]</span></p>
@@ -3034,7 +3034,7 @@ Soluzione — Esercizio 8
 </section>
 <section id="la-funzione-di-verosimiglianza" class="level2" data-number="6.2">
 <h2 data-number="6.2" class="anchored" data-anchor-id="la-funzione-di-verosimiglianza"><span class="header-section-number">6.2</span> La funzione di verosimiglianza</h2>
-<p>Il numero appena calcolato dipende dall’ipotesi che abbiamo fatto (<span class="math inline">\(\mu = 10\)</span>). Ma potevamo ipotizzare distribuzioni diverse: ciascuna assegna al campione una verosimiglianza diversa.</p>
+<p>Il numero appena calcolato dipende dall’ipotesi che abbiamo fatto (<span class="math inline">\(\mu = 10\)</span>). Ma potevamo ipotizzare distribuzioni diverse:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Codice del grafico</summary>
@@ -3054,7 +3054,7 @@ Soluzione — Esercizio 8
 </div>
 </div>
 </div>
-<p>L’idea allora è: proviamo <strong>tutti</strong> i valori candidati di <span class="math inline">\(\mu\)</span> (con <span class="math inline">\(\sigma\)</span> fissata, per semplicità), calcoliamo la verosimiglianza del campione per ciascuno, e disegniamo i risultati. Quella che otteniamo è la <strong>funzione di verosimiglianza</strong> <span class="math inline">\(\mathcal{L}(\mu)\)</span>:</p>
+<p>L’idea allora è: proviamo <strong>tutti</strong> i valori candidati di <span class="math inline">\(\mu\)</span> (con <span class="math inline">\(\sigma\)</span> fissata, per semplicità), calcoliamo la verosimiglianza per ciascuno, e disegniamo i risultati. Quella che otteniamo è la <strong>funzione di verosimiglianza</strong> <span class="math inline">\(\mathcal{L}(\mu)\)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb214"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb214-1"><a href="#cb214-1" aria-hidden="true" tabindex="-1"></a>mu_griglia <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">7</span>, <span class="dv">13</span>, <span class="at">by =</span> <span class="fl">0.05</span>)</span>
 <span id="cb214-2"><a href="#cb214-2" aria-hidden="true" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fu">sapply</span>(mu_griglia, <span class="cf">function</span>(m) <span class="fu">prod</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>)))</span>
@@ -3071,19 +3071,6 @@ Soluzione — Esercizio 8
 </div>
 </div>
 <p>La curva ha un massimo, e il massimo cade esattamente sulla <strong>media campionaria</strong> (linea rossa tratteggiata): tra tutte le normali candidate, quella centrata su <span class="math inline">\(\bar{y}\)</span> è la più compatibile con i dati osservati.</p>
-<div class="callout callout-style-default callout-important callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Importante
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Attenzione alla direzione: la verosimiglianza misura quanto sono plausibili <strong>i dati</strong> dato un valore dei parametri, non quanto è probabile <strong>un parametro</strong> dati i dati. Per questo <span class="math inline">\(\mathcal{L}(\mu)\)</span> non è una distribuzione di probabilità: è una funzione che <em>ordina</em> i valori dei parametri per compatibilità con il campione.</p>
-</div>
-</div>
 </section>
 <section id="a-che-cosa-serve" class="level2" data-number="6.3">
 <h2 data-number="6.3" class="anchored" data-anchor-id="a-che-cosa-serve"><span class="header-section-number">6.3</span> A che cosa serve</h2>
@@ -3171,7 +3158,7 @@ Importante
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Soluzione — Esercizio 10">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-28-contents" aria-controls="callout-28" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3180,7 +3167,7 @@ Soluzione — Esercizio 10
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-29" class="callout-29-contents callout-collapse collapse">
+<div id="callout-28" class="callout-28-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="cell">
 <div class="sourceCode cell-code" id="cb221"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb221-1"><a href="#cb221-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sapply</span>(<span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">11</span>), <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="fu">dnorm</span>(y, m, <span class="fl">1.5</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)))</span></code><button title="Copia negli appunti" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -3349,7 +3336,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
 </ul>
 <p>“Modello più grande” significa <em>con più parametri</em>, non “modello migliore”. Tra modelli annidati il più grande adatta sempre meglio i dati osservati (la <code>RSS</code> più piccola) e fornisce la stima meno distorta di <span class="math inline">\(\sigma^2\)</span> — ed è per questo che <code>anova()</code> lo usa al denominatore — ma proprio perché adatta <em>tutto</em>, rumore compreso, può <strong>overfittare</strong>: per <em>scegliere</em> un modello servono criteri che penalizzano la complessità (AIC e BIC, più avanti).</p>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-30-contents" aria-controls="callout-30" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-29-contents" aria-controls="callout-29" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3358,7 +3345,7 @@ La <span class="math inline">\(F\)</span> della tabella, ricalcolata a mano
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-30" class="callout-30-contents callout-collapse collapse">
+<div id="callout-29" class="callout-29-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Verifichiamo che le <code>F</code> escano davvero così, e che il denominatore sia <strong>sempre</strong> quello di <code>m4</code> (il modello più grande). Ricordiamo che <code>deviance()</code> di un <code>lm</code> è la sua devianza residua <span class="math inline">\(\text{SS}_E\)</span>.</p>
 <div class="cell">
@@ -3435,7 +3422,7 @@ m0  2 3860.723</code></pre>
 <li>si calcola <span class="math inline">\(\ell = e^{\Delta/2}\)</span>.</li>
 </ol>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-32-contents" aria-controls="callout-32" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-31-contents" aria-controls="callout-31" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3444,7 +3431,7 @@ Da dove viene <span class="math inline">\(e^{\Delta/2}\)</span>?
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-32" class="callout-32-contents callout-collapse collapse">
+<div id="callout-31" class="callout-31-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>L’AIC è <span class="math inline">\(\text{AIC} = -2\log\mathcal{L} + 2k\)</span>: la log-verosimiglianza messa su una certa scala (il fattore <span class="math inline">\(-2\)</span>), più una penalità per i <span class="math inline">\(k\)</span> parametri. Per tornare a una quantità in scala di <em>verosimiglianza</em> basta disfare quella scala: <span class="math display">\[
 \exp\!\left(-\frac{\text{AIC}}{2}\right) = \exp(\log\mathcal{L} - k) = \mathcal{L}\,e^{-k}.
@@ -3634,7 +3621,7 @@ m4 53.7   6.1  42.2   3.5   0.0</code></pre>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled" title="Soluzione — Esercizio 11">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-34-contents" aria-controls="callout-34" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-33-contents" aria-controls="callout-33" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -3643,7 +3630,7 @@ Soluzione — Esercizio 11
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-34" class="callout-34-contents callout-collapse collapse">
+<div id="callout-33" class="callout-33-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="cell">
 <div class="sourceCode cell-code" id="cb258"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb258-1"><a href="#cb258-1" aria-hidden="true" tabindex="-1"></a>mA <span class="ot">&lt;-</span> <span class="fu">lm</span>(kid_score <span class="sc">~</span> mom_iq <span class="sc">*</span> mom_hs,                      <span class="at">data =</span> kidiq)</span>
@@ -3846,7 +3833,7 @@ loaded via a namespace (and not attached):
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/mar-cald\.github\.io\/psqt\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
