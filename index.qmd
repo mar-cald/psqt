@@ -16,7 +16,9 @@ Il materiale didattico delle lezioni è raccolto in documenti, pensati per esser
 
 → **[Modelli lineari](modelli-lineari.qmd)**
 
-→ **[Introduzione alla statistica Bayesiana](bayes.qmd)**
+→ **[Introduzione alla statistica Bayesiana]**
+
+→ pad condiviso per [esercizi](https://etherpad.wikimedia.org/p/bayes)
 
 
 ## Materiale aggiuntivo

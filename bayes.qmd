@@ -1,5 +1,5 @@
 ---
-title: "Modelli lineari"
+title: "Introduzione alla statistica Bayesiana"
 subtitle: "Dispensa del corso"
 author: "Margherita Calderan"
 date: last-modified
@@ -8,1315 +8,2353 @@ number-sections: true
 ---
 
 ::: {.callout-tip icon=false title="📌 Come usare questa dispensa"}
-Questo documento raccoglie tutto il materiale della lezione (circa 7 ore) e va letto
-con **R aperto accanto**: il modo migliore per imparare è eseguire il codice man mano
-che lo incontrate, modificarlo e osservare che cosa cambia.
 
-Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a
-risolverli da soli prima di aprire la soluzione (riquadri verdi, chiusi di default).
+Questo documento raccoglie tutto il materiale della lezione. Parte del materiale didattico è stato adattato dalle slide del Prof. [Massimiliano Pastore](https://dpss.psy.unipd.it/~massimiliano.pastore/index.html) (a.a. 2024/2025) e dal corso che abbiamo tenuto alla Scuola Estiva di Metodologia AIP. Eventuali errori sono da attribuire alla sottoscritta (ovviamente).
+
+Questo documento raccoglie tutto il materiale della lezione e va letto
+con **R aperto accanto**. Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a risolverli da soli prima di aprire la soluzione.
 
 Prima di iniziare:
 
 1. installate i pacchetti necessari:
-   `install.packages(c("ggplot2", "sjPlot", "effects", "performance", "MuMIn"))`
-2. scaricate il file [kidiq.csv](dati/kidiq.csv) e salvatelo in una cartella `dati`
-   dentro la vostra cartella di lavoro.
+   `install.packages(c("rstanarm", "bayesplot", "HDInterval", "loo", "BayesFactor", "brms", "bridgesampling"))`
+2. per le ultime parti servono i file [kidiq.csv](dati/kidiq.csv) (lo stesso
+   della [dispensa sui modelli lineari](modelli-lineari.qmd)) e
+   [teddy_child.csv](dati/teddy_child.csv), salvati in una cartella `dati` dentro la vostra cartella di lavoro.
 :::
 
-# Il modello lineare
+# I due approcci all'inferenza
 
-Un **modello lineare** è un modello statistico della forma
+## Popolazione e campione
 
-$$
-Y = X\beta + \epsilon
-$$
+L'**inferenza statistica** è l'insieme delle operazioni che, a partire dai dati
+osservati, producono stime e affermazioni di incertezza sui parametri di una
+popolazione o di un processo sottostante (Gelman, Hill & Vehtari, 2020).
 
-dove $Y$ è la **variabile risposta** (o variabile dipendente), $X$ è un insieme di
-**predittori** (o variabili indipendenti) e $\epsilon$ è la **componente d'errore**,
-cioè la parte di $Y$ che il modello non spiega.
+I concetti di partenza sono due:
 
-Con $\beta$ indichiamo i **coefficienti di regressione**: lo scopo del modello è
-proprio stimare questi parametri a partire dai dati osservati.
+- un **parametro** è una caratteristica della popolazione, espressa da un valore
+  (di solito numerico e **incognito**). I parametri si indicano con lettere greche:
+  $\mu$, $\sigma^2$, $\theta$, $\beta$...
+- una **statistica** è un valore calcolato su un campione di ampiezza $n$ estratto
+  dalla popolazione. Le statistiche si indicano con lettere latine ($\bar{x}$, $s^2$,
+  $p$) e vengono usate come *stimatori* dei parametri incogniti.
 
-Questi modelli si chiamano *lineari* perché la relazione ipotizzata tra i predittori
-e la variabile dipendente è assunta essere lineare: ogni predittore contribuisce alla
-previsione di $Y$ in modo additivo, moltiplicato per il proprio coefficiente.
+Noi vorremmo conoscere la popolazione, ma possiamo osservare solo uno o (nei casi
+più fortunati) più campioni: tutta l'inferenza consiste nel risalire dal campione
+alla popolazione, quantificando l'incertezza di questo salto.
 
-I predittori possono essere **quantitativi** (es. età, QI) oppure **categoriali**
-(es. genere, gruppo sperimentale): vedremo che il modello lineare li gestisce
-entrambi, ed è proprio questa flessibilità a renderlo lo strumento di base
-dell'analisi dei dati in psicologia e non solo.
-
-## Le assunzioni del modello di regressione {#sec-assunzioni}
-
-Perché le stime e le inferenze del modello siano valide, il modello di regressione
-si fonda su alcune assunzioni:
-
-**1. Indipendenza tra $X$ ed errore.** La variabile $X$ e l'errore sono
-indipendenti nella popolazione: i predittori non contengono informazione
-sull'errore.
-
-**2. Indipendenza degli errori.** Ogni coppia di errori $\epsilon_i$ e
-$\epsilon_j$ è indipendente, per $i \neq j$: l'errore di un'osservazione non dice
-nulla sull'errore di un'altra (questa assunzione cade, ad esempio, con misure
-ripetute sugli stessi soggetti).
-
-**3. Linearità.** Il valore atteso dell'errore, dato il valore di $X$, è zero:
-$E(\epsilon_i) = E(\epsilon\,|\,x_i) = 0$. In altre parole, la relazione tra $X$ e
-$Y$ è davvero una retta: il modello non sbaglia *sistematicamente* in nessuna zona
-di $X$.
-
-**4. Omoschedasticità (varianza costante).** La varianza degli errori è la stessa
-per qualunque valore di $X$: $V(\epsilon\,|\,x_i) = \sigma^2$.
-
-**5. Normalità.** Gli errori si distribuiscono normalmente:
-$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$.
-
-::: {.callout-note}
-Le assunzioni riguardano **gli errori**, non la variabile $Y$ di per sé: non serve
-che $Y$ sia normale, serve che lo siano i residui del modello. Torneremo su questo
-punto nella @sec-adattamento, quando impareremo a *verificare* queste assunzioni
-con la diagnostica grafica.
-:::
-
-# La regressione lineare semplice
-
-Un modello con **un solo predittore** $X$ e una variabile dipendente $Y$
-quantitativa si chiama **regressione lineare semplice**.
-
-## Un solo predittore: quantitativo o categoriale
-
-Con un solo predittore, la formulazione del modello cambia a seconda del tipo di
-variabile:
-
-**1. Se $X$ è continua/quantitativa:**
-
-$$
-Y = \beta_0 + \beta_1 X + \epsilon
-$$
-
-dove $\beta_0$ è l'**intercetta** (il valore atteso di $Y$ quando $X = 0$) e
-$\beta_1$ è la **pendenza** (di quanto cambia, in media, $Y$ quando $X$ aumenta di
-una unità).
-
-**2. Se $X$ è categoriale con $k$ categorie:**
-
-$$
-Y = \beta_0 + \sum_{j=1}^{k-1} \beta_j D_j + \epsilon
-$$
-
-dove le $D_j$ sono **variabili dummy** che assumono solo i valori 0 e 1.
-
-Per esempio, con $k = 2$ categorie serve una sola dummy:
-
-$$
-Y = \beta_0 + \beta_1 D_1 + \epsilon
-$$
-
-mentre con $k = 3$ categorie ne servono due:
-
-$$
-Y = \beta_0 + \beta_1 D_1 + \beta_2 D_2 + \epsilon
-$$
-
-Per fortuna **non dobbiamo occuparci noi della ricodifica**: R la fa
-automaticamente quando il predittore è un `factor`. Quello che dobbiamo capire bene
-è il *significato* della ricodifica, per poter interpretare correttamente i
-parametri stimati: la categoria di riferimento (quella con tutte le dummy a 0)
-finisce nell'intercetta, e ciascun $\beta_j$ esprime la differenza tra la categoria
-$j$ e quella di riferimento.
-
-## I dati: `kidiq` {#sec-dati}
-
-In tutta la dispensa useremo un dataset classico (Gelman & Hill), che contiene le
-seguenti variabili relative a un campione di bambini di 3–4 anni:
-
-- `kid_score`: punteggio del bambino in un test cognitivo;
-- `mom_hs`: istruzione della madre (1 = diplomata, 0 = non diplomata);
-- `mom_iq`: QI della madre;
-- `mom_work`: condizione lavorativa della madre nei primi anni di vita del bambino (4 categorie);
-- `mom_age`: età della madre.
-
-Carichiamo i dati e sistemiamo le variabili categoriali, che nel file sono
-codificate come numeri:
 
 ```{r}
-#| label: carica-dati
-kidiq <- read.csv("dati/kidiq.csv")
-kidiq$mom_hs   <- factor(kidiq$mom_hs)
-kidiq$mom_work <- factor(kidiq$mom_work)
+#| label: diagramma-inferenza
+#| fig-height: 4.2
+#| fig-width: 9
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+par(mfrow = c(1, 2), mar = c(0.5, 0.5, 2.5, 0.5))
 
-str(kidiq)
+# il problema diretto: dalla popolazione ai campioni
+plot(NA, xlim = c(0, 10), ylim = c(0, 10), axes = FALSE, asp = 1,
+     xlab = "", ylab = "", main = "Campionare: molti campioni possibili")
+symbols(3, 6, circles = 2.4, add = TRUE, inches = FALSE,
+        bg = "royalblue3", fg = "royalblue4")
+text(3, 6, expression(Omega), col = "white", cex = 3)
+cx <- c(7.5, 8.3, 7.2, 5.6)          # centri dei campioni
+cy <- c(8.4, 5.9, 3.4, 1.6)
+raggio <- c(0.5, 0.9, 0.45, 0.3)     # campioni di ampiezza diversa
+colore <- c("slategrey", "royalblue", "lightsteelblue", "indianred")
+arrows(c(5.1, 5.4, 4.9, 3.9), c(7.0, 6.0, 4.9, 3.8),
+       c(6.7, 7.1, 6.4, 5.1), c(8.0, 5.9, 3.9, 2.1), length = 0.1, lwd = 2)
+for (i in 1:4) {
+  symbols(cx[i], cy[i], circles = raggio[i], add = TRUE, inches = FALSE,
+          bg = colore[i])
+  text(cx[i] + raggio[i] + 0.4, cy[i] + raggio[i] + 0.3, bquote(X[.(i)]))
+}
+
+# il problema inverso: dal campione alla popolazione
+plot(NA, xlim = c(0, 10), ylim = c(0, 10), axes = FALSE, asp = 1,
+     xlab = "", ylab = "", main = "Inferire: dal campione alla popolazione")
+symbols(4, 6.5, circles = 2.4, add = TRUE, inches = FALSE, bg = "grey85")
+text(4, 6.5, "???", cex = 2.5)
+symbols(7.2, 1.8, circles = 0.45, add = TRUE, inches = FALSE, bg = "royalblue")
+text(8.1, 2.2, expression(X[1]))
+arrows(6.7, 2.5, 5.5, 4.6, length = 0.1, lwd = 2)
+
 ```
+
+Vediamolo in R: due campioni dalla stessa popolazione danno medie diverse, e
+ripetendo l'estrazione mille volte otteniamo la **distribuzione campionaria**
+della media:
 
 ```{r}
-#| label: head-dati
-head(kidiq)
+mean(rnorm(30, mean = 100, sd = 15));mean(rnorm(30, mean = 100, sd = 15))
+medie = replicate(n = 1000, mean(rnorm(30, mean = 100, sd = 15)))
+hist(medie, main = "Distribuzione campionaria della media")
 ```
 
-Abbiamo 434 osservazioni e 5 variabili. Notate che `mom_hs` e `mom_work` ora sono
-`factor`: è così che R sa che deve trattarle come categoriali (e costruire le dummy
-al posto nostro).
+Ogni campione dà una statistica un po' diversa: questa variabilità da campione a
+campione è esattamente l'incertezza che l'inferenza deve quantificare.
 
-::: {.callout-note icon=false title="✏️ Esercizio 1 — Esplorare i dati"}
-Prima di stimare qualsiasi modello, è buona pratica guardare i dati. Con i comandi
-di base di R:
 
-a. quante madri sono diplomate e quante no?
-b. calcolate media e deviazione standard di `kid_score`;
-c. disegnate l'istogramma di `kid_score`: la distribuzione vi sembra simmetrica?
+I due approcci principali per farlo sono quello **frequentista** e quello
+**bayesiano**. Prima di introdurre il secondo, ripassiamo brevemente il primo.
+
+## Un problema concreto {#sec-problema}
+
+> Vogliamo stimare la proporzione di studenti dei corsi della Scuola di Psicologia
+> a cui piace la statistica.
+
+Usiamo i dati di un questionario rilevato all'inizio di un corso di Analisi dei
+Dati: su $n = 315$ rispondenti, a 75 la statistica piace (punteggio > 6).
+
+```{r}
+#| label: sondaggio-dati
+n_tot   <- 315
+n_piace <- 75
+n_piace / n_tot     # proporzione campionaria
+```
+
+La proporzione campionaria è circa 0.24 (il 24%). Ma questa è una *statistica*: che
+cosa possiamo dire del *parametro*, cioè della proporzione $\pi$ nella popolazione
+di tutti gli studenti?
+
+## L'approccio NHST {#sec-nhst}
+
+L'approccio classico — che è più corretto chiamare **Null Hypothesis Significance
+Testing** (NHST) piuttosto che "verifica di ipotesi" — procede così:
+
+1. si definisce un'**ipotesi nulla**, ad esempio: la proporzione di studenti a cui
+   piace la statistica è uguale a quella a cui non piace,
+   $$H_0: \pi = 0.5$$
+   e un'ipotesi alternativa, ad esempio $H_1: \pi < 0.5$;
+2. si calcola una **statistica test** sui dati osservati;
+3. conoscendo la **distribuzione campionaria** della statistica test *sotto*
+   $H_0$, si calcola la probabilità di osservare un risultato uguale o più estremo
+   di quello ottenuto: il **p-value**;
+4. se il p-value è inferiore a una soglia prefissata ($\alpha = 0.05$), si rigetta
+   $H_0$; altrimenti no.
+
+Vediamolo sui nostri dati. Se $H_0$ fosse vera, il numero di studenti a cui piace
+la statistica in un campione di 315 seguirebbe una distribuzione binomiale con
+$\pi = 0.5$:
+
+```{r}
+#| label: nhst-h0
+S <- 0:315                          # spazio campionario
+P <- dbinom(S, 315, prob = 0.5)     # probabilita di ciascun risultato sotto H0
+plot(S, P, type = "h",
+     xlab = "Numero di studenti a cui piace, su 315",
+     ylab = expression(f(x~"|"~H[0])))
+points(75, 0, pch = 19, col = "red")
+```
+
+Il punto rosso è il risultato osservato: 75. La probabilità di osservare 75 *o
+meno* successi, se $H_0$ fosse vera, è
+
+```{r}
+#| label: nhst-pvalue
+pbinom(75, 315, prob = 0.5)
+```
+
+un numero microscopico. 
+
+## Bayes vs. NHST {#sec-domanda}
+
+I risultati dell'approccio NHST rispondono alla domanda:
+
+> Assumendo che $H_0$ sia vera, qual è la probabilità di osservare valori uguali o
+> più estremi rispetto a quelli rilevati?
+
+In realtà, la domanda che ci interessa davvero è un'altra:
+
+> Dati i valori osservati, qual è la probabilità che la mia ipotesi sia vera?
+
+Non è la stessa cosa. Nel primo caso stiamo calcolando $P(R\,|\,H_0)$, la
+probabilità del risultato condizionata all'ipotesi (una **verosimiglianza**); nel
+secondo $P(H_0\,|\,R)$, la probabilità dell'ipotesi condizionata al risultato (una
+**probabilità a posteriori**). E in generale
+
+$$
+P(R\,|\,H_0) \neq P(H_0\,|\,R)
+$$
+
+Il legame tra le due probabilità è definito dal **teorema di Bayes**:
+
+$$
+P(H_0\,|\,R) = \frac{P(H_0)\,P(R\,|\,H_0)}
+{P(H_0)\,P(R\,|\,H_0) + P(H_1)\,P(R\,|\,H_1)}
+$$
+
+dove $P(H_0)$ è la **probabilità a priori** di $H_0$, cioè quanto era plausibile
+l'ipotesi *prima* di vedere il risultato.
+
+## Un esempio famoso (Cohen, 1994) {#sec-cohen}
+
+L'incidenza della schizofrenia negli adulti è circa del 2%. Supponiamo di avere un
+test diagnostico che individua il 95% dei soggetti realmente schizofrenici
+(sensibilità) e il 97% dei soggetti sani (specificità). Indichiamo:
+
+- $H_0$: il soggetto è sano; $H_1$: il soggetto è schizofrenico;
+- $R$: il test risulta positivo.
+
+Le probabilità in gioco sono:
+
+$$
+P(H_0) = 0.98 \qquad P(H_1) = 0.02 \qquad
+P(R\,|\,H_0) = 0.03 \qquad P(R\,|\,H_1) = 0.95
+$$
+
+Notate che $P(R\,|\,H_0) = 0.03 < 0.05$: in logica NHST, davanti a un test
+positivo rigetteremmo l'ipotesi che il soggetto sia sano. Applichiamo invece il
+teorema di Bayes:
+
+```{r}
+#| label: cohen-bayes
+pH0 <- 0.98; pH1 <- 0.02
+pR_H0 <- 0.03; pR_H1 <- 0.95
+
+pH0 * pR_H0 / (pH0 * pR_H0 + pH1 * pR_H1)
+```
+
+$$
+P(H_0\,|\,R) = \frac{0.98 \times 0.03}{0.98 \times 0.03 + 0.02 \times 0.95} \approx 0.61
+$$
+
+Nonostante il $P(R\,|\,H_0) = 0.03$, la probabilità che il soggetto sia sano, *dato*
+il test positivo, è del 61%! La differenza la fa la probabilità a priori: la
+schizofrenia è rara, quindi tra i positivi al test i falsi allarmi sono la
+maggioranza.
+
+Il modo più intuitivo di vederlo è con le **frequenze naturali**: su 10000
+persone, 200 sono schizofreniche e 9800 sane. Il test ne segnala positive
+$200 \times 0.95 = 190$ tra le malate e $9800 \times 0.03 = 294$ tra le sane. Tra i
+$190 + 294 = 484$ positivi, i sani sono $294/484 \approx 0.61$.
+
+```{r}
+#| label: albero-frequenze
+#| fig-height: 4.5
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+par(mar = c(0.5, 0.5, 0.5, 0.5))
+plot(NA, xlim = c(0, 10), ylim = c(0, 10), axes = FALSE, xlab = "", ylab = "")
+
+# rami dell'albero
+segments(5, 8.25, 2.5, 6.75);  segments(5, 8.25, 7.5, 6.75)
+segments(2.5, 5.25, 1, 3.25);  segments(2.5, 5.25, 4, 3.25)
+segments(7.5, 5.25, 6, 3.25);  segments(7.5, 5.25, 9, 3.25)
+
+# nodi
+box_x <- c(5, 2.5, 7.5, 1, 4, 6, 9)
+box_y <- c(9, 6, 6, 2.5, 2.5, 2.5, 2.5)
+etichetta <- c("10000\npersone", "200\nmalati", "9800\nsani",
+               "190\ntest +", "10\ntest -", "294\ntest +", "9506\ntest -")
+colore <- c("grey90", "khaki", "grey80",
+            "palegreen3", "lightblue", "steelblue1", "olivedrab3")
+for (i in 1:7) {
+  rect(box_x[i] - 0.85, box_y[i] - 0.75, box_x[i] + 0.85, box_y[i] + 0.75,
+       col = colore[i], border = "grey40")
+  text(box_x[i], box_y[i], etichetta[i], cex = 0.9)
+}
+
+# probabilita sui rami
+text(3.1, 7.8, "prev = 2%", cex = 0.85)
+text(6.8, 7.8, "98%", cex = 0.85)
+text(1.2, 4.5, "sens = 95%", cex = 0.85)
+text(3.6, 4.5, "5%", cex = 0.85)
+text(6.3, 4.5, "3%", cex = 0.85)
+text(8.9, 4.5, "spec = 97%", cex = 0.85)
+```
+
+I positivi al test sono le due caselle "test +": $190 + 294 = 484$, di cui 294
+sani. La proporzione di positivi che *non* sono malati è $294/484 \approx 0.61$.
+
+::: {.callout-note icon=false title="✏️ Esercizio 1 — Il teorema di Bayes in ambulatorio"}
+Lo stesso test viene ora usato in un ambulatorio specialistico, dove la
+prevalenza della schizofrenia tra chi arriva è del 20% (non del 2%).
+
+a. Ricalcolate $P(H_0\,|\,R)$ con il teorema di Bayes.
+b. Verificate il risultato con le frequenze naturali (partite da 10000 persone).
+c. Che cosa concludete sul ruolo della probabilità a priori?
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 1"}
 ```{r}
 #| label: sol-es1
-table(kidiq$mom_hs)
-
-mean(kidiq$kid_score)
-sd(kidiq$kid_score)
-
-hist(kidiq$kid_score, main = "", xlab = "Punteggio del bambino")
+pH0 <- 0.80; pH1 <- 0.20
+pH0 * 0.03 / (pH0 * 0.03 + pH1 * 0.95)
 ```
 
-Le madri diplomate sono 341, le non diplomate 93. Il punteggio medio dei bambini è
-circa 87, con deviazione standard di circa 20 punti. L'istogramma mostra una
-distribuzione leggermente asimmetrica a sinistra (qualche punteggio molto basso),
-ma nulla di drammatico. Ricordate comunque che le assunzioni del modello riguardano
-i **residui**, non la distribuzione di $Y$.
+a. $P(H_0\,|\,R) \approx 0.11$: ora un test positivo indica malattia con
+   probabilità circa 0.89.
+b. Su 10000 persone: 2000 malate, 8000 sane. Positivi: $2000 \times 0.95 = 1900$
+   malati e $8000 \times 0.03 = 240$ sani. Tra i 2140 positivi, i sani sono
+   $240/2140 \approx 0.11$.
+c. Lo **stesso risultato** (test positivo, stessa sensibilità e specificità) porta
+   a conclusioni molto diverse a seconda di quanto era plausibile l'ipotesi prima
+   di raccogliere il dato. 
 :::
 
-## Un predittore numerico {#sec-numerico}
 
-Vogliamo valutare se il **QI della madre** è predittivo del punteggio del bambino.
-Stimiamo il modello con la funzione `lm()` (*linear model*), la cui sintassi è
-`lm(risposta ~ predittore, data = dati)`:
+## L'approccio Bayesiano {#sec-idea-bayes}
 
-```{r}
-#| label: m1-scatter
-m1 <- lm(kid_score ~ mom_iq, data = kidiq)
+La differenza fondamentale tra i due approcci sta nel modo di trattare i parametri
+incogniti:
 
-plot(kid_score ~ mom_iq, data = kidiq,
-     xlab = "QI della madre", ylab = "Punteggio del bambino")
-abline(m1, col = "red", lwd = 2)
-```
+- nell'approccio **frequentista** i parametri sono **quantità fisse**: $\pi$ ha un
+  valore vero (ignoto), e non ha senso parlare della sua probabilità. Per questo il
+  p-value può solo condizionarsi a un valore ipotizzato ($H_0: \pi = 0.5$);
+- nell'approccio **bayesiano** i parametri sono trattati come **variabili
+  casuali**, con una distribuzione di probabilità che descrive la nostra
+  incertezza. Diventa quindi legittimo (e naturale) calcolare quantità come
+  $P(\pi < 0.5\,|\,\text{dati})$ o $P(0.2 < \pi < 0.3\,|\,\text{dati})$.
 
-I coefficienti stimati sono:
-
-```{r}
-#| label: m1-coef
-coef(m1)
-```
-
-L'equazione di regressione è dunque
+Il meccanismo è sempre il teorema di Bayes, applicato però al parametro:
 
 $$
-\hat{Y} = 25.8 + 0.61 X
+p(\theta\,|\,D) = \frac{p(D\,|\,\theta)\, p(\theta)}{p(D)}
 $$
 
-dove il "cappello" su $Y$ indica che si tratta dei valori *previsti* dal modello.
-Come si leggono i coefficienti?
+che si legge:
 
-- $\beta_1 = 0.61$: per ogni punto di QI in più della madre, il punteggio atteso
-  del bambino aumenta in media di 0.61 punti;
-- $\beta_0 = 25.8$: è il punteggio atteso di un bambino la cui madre ha QI pari a
-  zero. Un valore privo di senso! L'intercetta serve al modello, ma non sempre ha
-  un'interpretazione sostantiva: per renderla interpretabile si può *centrare* il
-  predittore (es. `mom_iq - 100`), così l'intercetta diventa il punteggio atteso
-  per una madre con QI = 100.
+$$
+\text{posterior} = \frac{\text{likelihood} \times \text{prior}}{\text{evidence}}
+$$
 
-## La valutazione delle stime: `summary()` {#sec-summary}
+- la **prior** $p(\theta)$ formalizza ciò che sappiamo (o crediamo) sul parametro
+  *prima* di vedere i dati;
+- la **likelihood** $p(D\,|\,\theta)$ dice quanto i dati osservati sono compatibili
+  con ciascun valore del parametro;
+- la **posterior** $p(\theta\,|\,D)$ è il risultato: ciò che sappiamo sul parametro
+  *dopo* aver visto i dati.
 
-La funzione `summary()` restituisce il quadro completo del modello:
+L'inferenza bayesiana può essere vista come una **riallocazione di credibilità**
+tra i possibili valori del parametro: i valori consistenti con i dati guadagnano
+credibilità, quelli inconsistenti la perdono (Kruschke, 2015).
+
+Prima di mettere in pratica questa formula ci servono però due ingredienti: un
+ripasso delle regole della probabilità (per capire *da dove viene* il teorema di
+Bayes) e il concetto di verosimiglianza (per capire *che cos'è* $p(D\,|\,\theta)$).
+
+# Ripasso di probabilità
+
+## Che cos'è la probabilità
+
+In termini molto generali, la probabilità è una **misura dell'incertezza**
+associata al verificarsi di un evento. Dato un fenomeno aleatorio (es. il lancio di
+un dado), l'insieme di tutti i possibili esiti si chiama **spazio campionario**
+$S$; un **evento** è un sottoinsieme di $S$.
+
+Per esempio nel lancio di un dado lo spazio campionario è ....
+Un possibile evento è ....
+
+Gli assiomi di Kolmogorov:
+
+1. una probabilità non può essere negativa;
+2. la probabilità dell'intero spazio campionario è 1;
+3. per due eventi reciprocamente esclusivi, la probabilità che se ne verifichi
+   uno *o* l'altro è la somma delle due probabilità.
+
+
+## Distribuzioni di probabilità {#sec-distribuzioni}
+
+Una **distribuzione di probabilità** associa a ogni esito dello spazio campionario
+la sua probabilità. Se lo spazio campionario è **discreto** (esiti numerabili: es.
+numero di errori in un compito) si parla di *funzione di massa* di probabilità; se
+è **continuo** (es. un tempo di reazione) di *funzione di densità*.
+
+Alcune distribuzioni che incontreremo ([overview](https://distribution-explorer.github.io/)):
+
+| Nome | Supporto | Parametri | Media | Varianza |
+|------|----------|-----------|-------|----------|
+| Bernoulli | $x \in \{0, 1\}$ | $\theta$ | $\theta$ | $\theta(1-\theta)$ |
+| Binomiale | $x \in \{0, 1, \ldots, n\}$ | $n$, $\theta$ | $n\theta$ | $n\theta(1-\theta)$ |
+| Poisson | $x \in \{0, 1, 2, \ldots\}$ | $\lambda$ | $\lambda$ | $\lambda$ |
+| Uniforme | $a \le x \le b$ | $a$, $b$ | $(a+b)/2$ | $(b-a)^2/12$ |
+| Normale | $-\infty < x < +\infty$ | $\mu$, $\sigma$ | $\mu$ | $\sigma^2$ |
+| Beta | $0 \le x \le 1$ | $a$, $b$ | $a/(a+b)$ | $\frac{ab}{(a+b)^2(a+b+1)}$ |
+
+::: {.callout-note}
+Una **densità** può tranquillamente superare 1 (provate
+`curve(dnorm(x, 0, 0.1), -0.5, 0.5)`), mentre una massa di probabilità no.
+:::
+
+## Le distribuzioni in R {#sec-dpqr}
+
+R mette a disposizione, per ogni distribuzione, quattro funzioni con prefissi
+diversi:
+
+- `d*`: la massa (discreta) o densità (continua) in un punto;
+- `p*`: la probabilità cumulata fino a un quantile;
+- `q*`: il quantile corrispondente a una probabilità cumulata;
+- `r*`: estrazione di campioni casuali dalla distribuzione.
+
+Il suffisso identifica la distribuzione: `binom`, `pois`, `unif`, `norm`, `t`,
+`beta`... Ad esempio `rnorm()` genera campioni da una normale.
+
+**Esempio (Poisson).** Supponiamo che il numero di errori commessi in un compito
+cognitivo segua una Poisson con $\lambda = 3$:
 
 ```{r}
-#| label: m1-summary
-summary(m1)
+#| label: poisson-plot
+x <- 0:14
+plot(x, dpois(x, lambda = 3), type = "h", ylab = "Pr(x)",
+     xlab = "Numero di errori")
+points(x, dpois(x, lambda = 3), pch = 19)
 ```
 
-Leggiamo l'output pezzo per pezzo:
+Qual è la probabilità che un soggetto commetta esattamente 4 errori? E più di 2?
 
-- **`Residuals`**: la distribuzione dei residui (osservato − previsto). Se il
-  modello è adeguato, mediana vicina a 0 e quartili circa simmetrici.
-- **`Estimate`**: le stime dei coefficienti, già viste con `coef()`.
-- **`Std. Error`**: l'errore standard di ciascuna stima, cioè la sua incertezza:
-  con campioni diversi otterremmo stime un po' diverse, e l'errore standard ne
-  quantifica la variabilità.
-- **`t value` e `Pr(>|t|)`**: la statistica $t$ (stima / errore standard) e il
-  relativo p-value per l'ipotesi nulla $\beta = 0$. Qui il test su `mom_iq` è
-  altamente significativo: il QI della madre predice il punteggio del bambino.
-- **`Residual standard error`** ($\sigma$): la deviazione standard dei residui,
-  circa 18.3 punti. Ci dice di quanto, in media, il modello "sbaglia" le previsioni.
-- **`Multiple R-squared`**: la proporzione di variabilità di $Y$ spiegata dal
-  modello, qui circa il 20%. Ne riparleremo nella @sec-variabilita.
-- **`F-statistic`**: il test globale del modello contro il modello nullo (solo
-  intercetta).
+```{r}
+#| label: poisson-esempi
+dpois(4, 3)          # esattamente 4 errori
+1 - ppois(2, 3)      # piu di 2 errori
+```
 
-::: {.callout-note icon=false title="✏️ Esercizio 2 — La vostra prima regressione"}
-Stimate un modello in cui il punteggio del bambino è predetto dall'**età della
-madre** (`mom_age`).
+E possiamo *simulare* soggetti, verificando che media e varianza empiriche
+convergono a $\lambda$
 
-a. Scrivete l'equazione di regressione stimata.
-b. Come interpretate la pendenza?
-c. Qual è il punteggio previsto per un bambino la cui madre ha 20 anni? E 30 anni?
-d. Guardando $R^2$, l'età della madre vi sembra un buon predittore?
+```{r}
+#| label: poisson-sim
+set.seed(1)
+errori <- rpois(100000, 3)
+c(media = mean(errori), varianza = var(errori))
+```
+
+::: {.callout-note icon=false title="✏️ Esercizio 2 — Distribuzioni in R"}
+Il tempo (in secondi) impiegato da una cavia per completare un labirinto è
+distribuito normalmente con media $\mu = 180$ e deviazione standard $\sigma = 40$.
+
+a. Qual è la probabilità che una cavia impieghi meno di 200 secondi?
+b. Qual è la probabilità che impieghi tra 140 e 220 secondi?
+c. Rappresentate graficamente tre normali con media 180 e deviazione standard
+   20, 40 e 80 (suggerimento: `curve()` con `add = TRUE`).
+d. Quale valore di tempo è superato solo dal 5% delle cavie?
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 2"}
 ```{r}
 #| label: sol-es2
-m_age <- lm(kid_score ~ mom_age, data = kidiq)
-coef(m_age)
-summary(m_age)$r.squared
+pnorm(200, 180, 40)
+pnorm(220, 180, 40) - pnorm(140, 180, 40)
+
+curve(dnorm(x, 180, 20), from = 180 - 4 * 80, to = 180 + 4 * 80,
+      ylab = "f(x)", xlab = "Tempo (secondi)")
+curve(dnorm(x, 180, 40), add = TRUE, col = "blue")
+curve(dnorm(x, 180, 80), add = TRUE, col = "red")
+legend("topleft", legend = c("sd = 20", "sd = 40", "sd = 80"),
+       col = c("black", "blue", "red"), lty = 1, bty = "n")
+
+qnorm(0.95, 180, 40)
 ```
 
-a. $\hat{Y} = 70.96 + 0.70 \cdot \text{mom\_age}$.
-b. Per ogni anno in più della madre, il punteggio atteso del bambino aumenta in
-   media di 0.70 punti.
-c. Possiamo calcolarli a mano oppure, meglio, con `predict()`:
-
-```{r}
-#| label: sol-es2-pred
-predict(m_age, newdata = data.frame(mom_age = c(20, 30)))
-```
-
-d. $R^2 \approx 0.009$: l'età della madre spiega meno dell'1% della variabilità dei
-   punteggi. La pendenza è positiva ma il predittore, da solo, è debolissimo —
-   un buon promemoria del fatto che un coefficiente "significativo o quasi" non
-   implica un modello *utile*.
+a. $P(X < 200) \approx 0.69$.
+b. $P(140 < X < 220) \approx 0.68$ (la classica regola "circa due terzi entro una
+   deviazione standard").
+c. Al crescere di $\sigma$ la curva si abbassa e si allarga: l'area totale resta 1.
+d. Il 95° percentile è circa 246 secondi.
 :::
 
-::: {.callout-note icon=false title="✏️ Esercizio 3 — Intervalli di confidenza"}
-Il p-value non è l'unico modo (e nemmeno il migliore) per quantificare
-l'incertezza. Con la funzione `confint()` calcolate l'intervallo di confidenza al
-95% per i coefficienti di `m1`. Come lo interpretate, in particolare per `mom_iq`?
-L'intervallo contiene lo zero?
+## Probabilità congiunte, marginali e condizionate {#sec-congiunte}
+
+Spesso ci interessa la probabilità del verificarsi *insieme* di due (o più)
+eventi. Costruiamo un esempio semplice: lanciamo una moneta equa **tre volte**.
+Lo spazio campionario ha 8 sequenze equiprobabili (TTT, TTC, TCT, ...). Definiamo
+due variabili casuali:
+
+- $X$ = numero di teste (0, 1, 2 o 3);
+- $Y$ = numero di *cambi* testa/croce nella sequenza (0, 1 o 2). Ad esempio la
+  sequenza TCT contiene 2 cambi, la sequenza TTT nessuno.
+
+Elencando le 8 sequenze si ottiene la **distribuzione congiunta**
+$Pr(X = x, Y = y)$:
+
+|  | $X=0$ | $X=1$ | $X=2$ | $X=3$ | totale |
+|---|---|---|---|---|---|
+| $Y=0$ | 1/8 | 0 | 0 | 1/8 | **2/8** |
+| $Y=1$ | 0 | 2/8 | 2/8 | 0 | **4/8** |
+| $Y=2$ | 0 | 1/8 | 1/8 | 0 | **2/8** |
+| totale | **1/8** | **3/8** | **3/8** | **1/8** | 1 |
+
+E se volessimo la probabilità di un valore di $X$ *da solo* — per esempio
+$Pr(X = 1)$, "esattamente una testa", senza badare ai cambi? Guardando la colonna
+$X = 1$ della tabella: una sequenza con una sola testa può avere 1 cambio
+*oppure* 2 cambi. Sono casi che si escludono a vicenda, quindi (terzo assioma di
+Kolmogorov) le loro probabilità si **sommano**:
+
+$$
+Pr(X = 1) =
+\underbrace{Pr(X = 1, Y = 0)}_{0} +
+\underbrace{Pr(X = 1, Y = 1)}_{2/8} +
+\underbrace{Pr(X = 1, Y = 2)}_{1/8} = \frac{3}{8}
+$$
+
+che è esattamente il totale della colonna. Le distribuzioni ottenute così — i
+totali di riga e di colonna — si chiamano **distribuzioni marginali**: ciascuna descrive una variabile per conto suo, qualunque sia il valore dell'altra. In generale, per ottenere la marginale di $X$ si somma la congiunta su tutti i valori di $Y$ (si dice "marginalizzare rispetto a $Y$"):
+
+$$
+Pr(x) = \sum_y Pr(x, y)
+$$
+
+La **probabilità condizionata** risponde invece a domande del tipo: qual è la
+probabilità che la sequenza abbia 1 cambio, *sapendo* che ha 1 testa? Si calcola
+restringendo lo spazio ai soli casi compatibili con la condizione:
+
+$$
+Pr(y\,|\,x) = \frac{Pr(x, y)}{Pr(x)}
+$$
+
+Nel nostro esempio:
+
+$$
+Pr(Y = 1\,|\,X = 1) = \frac{2/8}{3/8} = \frac{2}{3} \qquad
+Pr(X = 1\,|\,Y = 1) = \frac{2/8}{4/8} = \frac{1}{2}
+$$
+
+Di nuovo: $Pr(y\,|\,x) \neq Pr(x\,|\,y)$. 
+
+Due variabili si dicono **indipendenti** se e solo se $Pr(y\,|\,x) = Pr(y)$ per
+ogni $x$ e $y$ o, equivalentemente, se la congiunta è il prodotto delle marginali:
+$Pr(x, y) = Pr(x)\,Pr(y)$.
+
+::: {.callout-note icon=false title="✏️ Esercizio 3 — Lancio di due dadi"}
+
+Si consideri il lancio di due dadi equilibrati. Siano X e Y le variabili aleatorie che rappresentano rispettivamente il risultato del primo e del secondo dado.
+
+1. Calcolare la probabilità congiunta che X = 3 e Y = 5.
+
+2. Calcolare la probabilità che Y = 5 dato che X = 3.
+
+3. Sono X e Y variabili indipendenti? Giustificare la risposta.
+
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 3"}
+
 ```{r}
-#| label: sol-es3
-confint(m1)
+# Calcolare la probabilità congiunta che X = 3 e Y = 5.
+(1/6) * (1/6)
+
+# Calcolare la probabilità che Y = 5 dato che X = 3.
+(1/6)
+
+# X e Y sono indipendenti perché il risultato di un dado 
+# non influenza il risultato dell'altro dado
 ```
 
-L'intervallo per `mom_iq` va da circa 0.50 a 0.73: i dati sono compatibili con un
-effetto del QI della madre compreso tra mezzo punto e tre quarti di punto per ogni
-punto di QI. Lo zero è ben lontano dall'intervallo, coerentemente con il p-value
-piccolissimo visto nel `summary()`. Notate quanto è più informativo dell'enunciato
-"p < .05": l'intervallo ci dice *quanto grande* è plausibilmente l'effetto.
 :::
 
-## La diagnostica grafica {#sec-diagnostica}
+## Da dove viene il teorema di Bayes {#sec-derivazione}
 
-Applicando `plot()` a un oggetto `lm` otteniamo quattro grafici diagnostici, che
-servono a controllare le assunzioni della @sec-assunzioni:
-
-```{r}
-#| label: m1-diag
-#| fig-height: 7
-par(mfrow = c(2, 2))
-plot(m1)
-par(mfrow = c(1, 1))
-```
-
-- **Residuals vs Fitted**: i residui contro i valori previsti. Se la relazione è
-  davvero lineare, i punti si dispongono *a caso* attorno allo zero, senza
-  curvature (linearità) né forme a imbuto (omoschedasticità).
-- **Normal Q-Q**: confronta i quantili dei residui standardizzati con quelli di una
-  normale; se l'assunzione di normalità regge, i punti stanno sulla diagonale.
-- **Scale-Location**: versione "stabilizzata" del primo grafico, utile per vedere
-  se la variabilità dei residui cresce con i valori previsti (eteroschedasticità).
-- **Residuals vs Leverage**: evidenzia osservazioni con grande *leva* e grande
-  residuo, cioè i potenziali **casi influenti** (ne parleremo nella
-  @sec-anomali, insieme alla distanza di Cook).
-
-R etichetta automaticamente i casi più estremi (qui 87, 273, 286): non sono
-necessariamente un problema, ma meritano un'occhiata.
-
-## Un predittore dicotomico {#sec-dicotomico}
-
-Vogliamo ora valutare se il **livello di istruzione della madre** (diplomata o no)
-è predittivo del punteggio del bambino. Il predittore è un `factor` con due
-livelli, quindi R costruisce per noi la dummy $D$ (0 = non diplomata, 1 =
-diplomata):
-
-```{r}
-#| label: m2-boxplot
-m2 <- lm(kid_score ~ mom_hs, data = kidiq)
-
-plot(kid_score ~ mom_hs, data = kidiq,
-     xlab = "Diploma della madre", ylab = "Punteggio del bambino")
-```
-
-(Con un predittore `factor`, `plot()` produce automaticamente dei boxplot.)
-
-```{r}
-#| label: m2-coef
-coef(m2)
-```
-
-L'equazione di regressione è
+Il teorema di Bayes è una conseguenza diretta della definizione di
+probabilità condizionata. Scriviamola nei due sensi:
 
 $$
-\hat{Y} = 77.55 + 11.77 D
+Pr(y\,|\,x) = \frac{Pr(x, y)}{Pr(x)} \qquad
+Pr(x\,|\,y) = \frac{Pr(x, y)}{Pr(y)}
 $$
 
-L'interpretazione, con una dummy, è in termini di **medie di gruppo**:
+Ricavando $Pr(x, y)$ da entrambe e uguagliando:
 
-- $\beta_0 = 77.55$: punteggio medio previsto quando $D = 0$, cioè la media dei
-  bambini con madre **non** diplomata;
-- $\beta_1 = 11.77$: la **differenza** tra le medie dei due gruppi. I figli di
-  madri diplomate ottengono in media 11.77 punti in più
-  ($77.55 + 11.77 = 89.32$).
+$$
+Pr(y\,|\,x)\,Pr(x) = Pr(x\,|\,y)\,Pr(y)
+$$
+
+e dividendo per $Pr(x)$:
+
+$$
+Pr(y\,|\,x) = \frac{Pr(x\,|\,y)\,Pr(y)}{Pr(x)}
+$$
+
+Questo è il teorema di Bayes. 
+
+# La verosimiglianza {#sec-verosimiglianza}
+
+Il secondo ingrediente della formula di Bayes è la **likelihood** (verosimiglianza)
+$p(D\,|\,\theta)$. L'idea, passo per passo:
+
+1. abbiamo un **campione di dati**;
+2. **ipotizziamo** che provenga da una certa distribuzione — il "processo
+   generatore dei dati" — ad esempio una normale con $\mu = 10$ e $\sigma = 1.5$;
+3. con quella distribuzione, calcoliamo la **densità di ciascun punto** osservato.
 
 ```{r}
-#| label: m2-summary
-summary(m2)
+#| label: lik-campione
+y <- c(7.9, 9.4, 10.1, 10.8, 12.3)   # il nostro piccolo campione
+dnorm(y, mean = 10, sd = 1.5)        # densita di ogni punto se Y ~ N(10, 1.5^2)
 ```
 
-Il test $t$ su `mom_hs1` ci dice che la differenza tra i due gruppi è
-statisticamente significativa, ma $R^2 \approx 0.056$: il diploma della madre, da
-solo, spiega poco della variabilità dei punteggi.
+```{r}
+#| label: lik-idea
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+curve(dnorm(x, 10, 1.5), from = 5, to = 15, lwd = 2,
+      xlab = "y", ylab = "f(y)", ylim = c(0, 0.3))
+d <- dnorm(y, 10, 1.5)
+segments(y, 0, y, d, col = "red", lty = 2)
+points(y, rep(0, length(y)), pch = 19)
+points(y, d, pch = 19, col = "red")
+```
 
-::: {.callout-note icon=false title="✏️ Esercizio 4 — Regressione e medie di gruppo"}
-Verificate "a mano" l'interpretazione dei coefficienti di `m2`:
+Le cinque densità dicono quanto ciascun punto è "plausibile" sotto la distribuzione
+ipotizzata. Ma il campione è uno solo: i punti sono stati osservati **insieme**, e
+la probabilità di eventi congiunti indipendenti — lo abbiamo appena ripassato — si
+ottiene **moltiplicando**:
 
-a. calcolate la media di `kid_score` separatamente per i due gruppi di `mom_hs`
-   (suggerimento: `tapply()`);
-b. confrontate le medie ottenute con i coefficienti del modello;
-c. (extra) confrontate l'output di `summary(m2)` con quello di un test $t$ a
-   varianze uguali: `t.test(kid_score ~ mom_hs, data = kidiq, var.equal = TRUE)`.
-   Che cosa notate?
+$$
+\mathcal{L}(\theta) = \prod_i f(y_i\,|\,\theta)
+$$
+
+```{r}
+#| label: lik-prodotto
+prod(dnorm(y, 10, 1.5))               # verosimiglianza
+sum(dnorm(y, 10, 1.5, log = TRUE))    # log-verosimiglianza
+```
+
+Il prodotto di tante densità è un numero piccolissimo: per questo si lavora quasi
+sempre con la **log-verosimiglianza**, che trasforma il prodotto in una somma.
+
+Il numero appena calcolato dipende dall'ipotesi fatta ($\mu = 10$). Ma potevamo
+ipotizzare qualunque altro valore: proviamoli *tutti* (con $\sigma$ fissata, per
+semplicità). Quella che otteniamo è la **funzione di verosimiglianza**
+$\mathcal{L}(\mu)$:
+
+```{r}
+#| label: lik-funzione
+mu_griglia <- seq(7, 13, by = 0.05)
+logL <- numeric(length(mu_griglia))
+for (i in 1:length(mu_griglia)) {
+  logL[i] <- sum(dnorm(y, mu_griglia[i], 1.5, log = TRUE))
+}
+plot(mu_griglia, logL, type = "l", lwd = 2,
+     xlab = expression(mu), ylab = "log-likelihood")
+abline(v = mean(y), lty = 2, col = "red")
+```
+
+La curva ha un massimo, e il massimo cade esattamente sulla **media campionaria**
+(linea rossa): tra tutte le normali candidate, quella centrata su $\bar{y}$ è la
+più compatibile con i dati. Questo è il principio della **massima verosimiglianza**
+(*maximum likelihood*).
+
+
+::: {.callout-note icon=false title="✏️ Esercizio 4 — La verosimiglianza del sondaggio"}
+Tornate ai dati della @sec-problema (75 successi su 315).
+
+a. Costruite una griglia di valori di $\theta$ da 0 a 1 (by = 0.001) e calcolate
+   la verosimiglianza binomiale di ciascun valore con
+   `dbinom(75, 315, prob = theta)`.
+b. Rappresentatela graficamente.
+c. Per quale valore di $\theta$ la verosimiglianza è massima? Confrontatelo con la
+   proporzione campionaria.
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 4"}
 ```{r}
 #| label: sol-es4
-medie <- tapply(kidiq$kid_score, kidiq$mom_hs, mean)
-medie
-medie[2] - medie[1]
-coef(m2)
+theta <- seq(0, 1, by = 0.001)
+L <- dbinom(75, 315, prob = theta)
+
+plot(theta, L, type = "l", lwd = 2,
+     xlab = expression(theta), ylab = "Likelihood")
+abline(v = theta[which.max(L)], lty = 2, col = "red")
+
+theta[which.max(L)]
+75 / 315
 ```
 
-La media del gruppo 0 (77.55) coincide con l'intercetta e la differenza tra le
-medie (11.77) coincide con il coefficiente della dummy.
-
-```{r}
-#| label: sol-es4-ttest
-t.test(kid_score ~ mom_hs, data = kidiq, var.equal = TRUE)
-```
-
-La statistica $t$ e il p-value sono identici (a parte il segno, che dipende solo
-dall'ordine dei gruppi) a quelli del coefficiente `mom_hs1` nel `summary(m2)`: il
-test $t$ per due gruppi indipendenti **è** un modello lineare con un predittore
-dicotomico. Molti dei test "classici" sono casi particolari del modello lineare.
+Il massimo cade su $\theta = 0.238$, esattamente la proporzione campionaria: la
+stima di massima verosimiglianza di una proporzione è la proporzione osservata.
+Notate anche che la curva è *stretta*: con $n = 315$ i dati sono molto informativi
+e i valori di $\theta$ lontani da 0.24 sono praticamente incompatibili con quanto
+osservato.
 :::
 
-# La regressione multipla
+# L'aggiornamento bayesiano: il caso binomiale {#sec-binomiale}
 
-Quando il modello ha più predittori, la formulazione può essere scritta:
+## Un esempio con prior discreta {#sec-kiwi}
 
-**1. in forma matriciale:**
-
-$$
-Y = X\beta + \epsilon
-$$
-
-**2. in forma estesa:**
+Un ornitologo vuole stimare la proporzione $\theta$ di maschi in una popolazione di
+kiwi. Il modello delle osservazioni è una Bernoulli: ogni animale osservato è
+maschio con probabilità $\theta$ e femmina con probabilità $1 - \theta$, in modo
+indipendente dagli altri. Osservando $N$ animali di cui $z$ maschi, la
+verosimiglianza è
 
 $$
-Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \ldots + \beta_k X_k + \epsilon
+p(D\,|\,\theta) = \theta^{z}\,(1 - \theta)^{N - z}
 $$
 
-Quando il modello ha più predittori (quantitativi e/o categoriali) e una sola
-variabile dipendente quantitativa $Y$, si parla di **regressione lineare
-multipla**.
+Per iniziare, supponiamo (irrealisticamente) che $\theta$ possa assumere **solo tre
+valori**: 0.25, 0.5, 0.75. Le nostre credenze a priori: il valore più plausibile è
+0.5 (probabilità 0.5), gli altri due si dividono il resto (0.25 ciascuno).
 
-## Un esempio con due predittori
-
-Consideriamo un modello che predice il punteggio del bambino a partire dal QI
-**e** dal livello di istruzione della madre. In R basta sommare i predittori nella
-formula:
+Osserviamo 9 animali: 2 maschi e 7 femmine. Calcoliamo la posterior *a mano*,
+seguendo esattamente il teorema di Bayes:
 
 ```{r}
-#| label: m3-fit
-m3 <- lm(kid_score ~ mom_iq + mom_hs, data = kidiq)
-coef(m3)
+#| label: kiwi-griglia
+theta <- c(0.25, 0.50, 0.75)          # valori possibili del parametro
+prior <- c(0.25, 0.50, 0.25)          # probabilita a priori
+
+# dati: 2 maschi su 9 animali
+z <- 2; N <- 9
+like <- theta^z * (1 - theta)^(N - z) # verosimiglianza di ciascun theta
+
+pD <- sum(like * prior)  # evidence: p(D) normalizzazione
+post <- (like * prior) / pD # teorema di Bayes
+round(data.frame(theta, prior, like, post), 4)
 ```
-
-L'equazione di regressione è
-
-$$
-\hat{Y} = 25.73 + 0.56 X + 5.95 D
-$$
-
-Poiché $D \in \{0, 1\}$, graficamente otteniamo **due rette parallele**: stessa
-pendenza (0.56), intercette diverse (25.73 per le madri non diplomate, $25.73 +
-5.95 = 31.68$ per le diplomate):
 
 ```{r}
-#| label: m3-plot
-library(ggplot2)
-cf <- coef(m3)
-ggplot(kidiq, aes(x = mom_iq, y = kid_score, colour = mom_hs)) +
-  geom_point(alpha = 0.5) +
-  geom_abline(intercept = cf[1],         slope = cf[2], colour = "#F8766D", linewidth = 1) +
-  geom_abline(intercept = cf[1] + cf[3], slope = cf[2], colour = "#00BFC4", linewidth = 1) +
-  labs(x = "QI della madre", y = "Punteggio del bambino", colour = "Diploma")
+#| label: kiwi-plot
+#| fig-height: 3.4
+#| fig-width: 9
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
+plot(theta, prior, type = "h", lwd = 4, xlim = c(0, 1), ylim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(theta)), main = "Prior")
+plot(theta, like, type = "h", lwd = 4, xlim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(D~"|"~theta)),
+     main = "Likelihood")
+plot(theta, post, type = "h", lwd = 4, xlim = c(0, 1), ylim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(theta~"|"~D)),
+     main = "Posterior")
+par(mfrow = c(1, 1))
 ```
 
-L'interpretazione dei coefficienti cambia in modo sottile ma importante: ogni
-coefficiente esprime l'effetto di quel predittore **a parità degli altri**.
-Ad esempio, $\beta_1 = 0.56$ è l'effetto del QI della madre *a parità di livello di
-istruzione*.
+Leggiamo il risultato. A priori credevamo soprattutto in $\theta = 0.5$; i dati (2
+maschi su 9) sono molto più compatibili con $\theta = 0.25$; la posterior
+rialloca la credibilità di conseguenza: $\theta = 0.25$ passa da 0.25 a 0.68,
+$\theta = 0.5$ scende da 0.50 a 0.32, e $\theta = 0.75$ diventa praticamente
+impossibile.
 
-## L'analisi degli effetti
+Notate tre cose:
 
-Con `anova()` otteniamo la scomposizione della variabilità spiegata dai singoli
-effetti del modello:
+- il denominatore $p(D) = \sum_\theta p(D\,|\,\theta)\,p(\theta)$ serve solo a far
+  sommare la posterior a 1: per questo spesso si scrive
+  $\text{posterior} \propto \text{prior} \times \text{likelihood}$;
+- la posterior è un **compromesso** tra prior e likelihood;
+- potremmo ora usare la posterior come *nuova prior* e raccogliere altri dati:
+  l'aggiornamento bayesiano è intrinsecamente **sequenziale**.
+
+::: {.callout-note icon=false title="✏️ Esercizio 5 — Il sondaggio con prior a griglia"}
+Torniamo al sondaggio sulla statistica (75 su 315). Questa volta, invece della sola
+$H_0: \pi = 0.5$, formalizziamo delle credenze a priori più articolate su 11 valori
+possibili di $\theta$: $0, 0.1, 0.2, \ldots, 1$. Immaginando di aver chiesto in
+aula, le probabilità a priori raccolte sono:
 
 ```{r}
-#| label: m3-anova
-anova(m3)
-summary(m3)$r.squared
+theta <- seq(0, 1, by = 0.1); # possibili alori di pi
+prior <- c(1, 3, 0, 4, 0, 0, 0, 1, 0, 0, 0) / 9 #credenze
+cbind(theta, prior)
 ```
 
-Entrambi gli effetti risultano significativi e il modello spiega circa il 21.4%
-della variabilità dei punteggi (era il 20.1% con il solo QI: l'istruzione della
-madre aggiunge poco, una volta tenuto conto del QI).
 
-::: {.callout-warning}
-Attenzione: `anova()` usa somme dei quadrati **sequenziali** (Tipo I): l'ordine in
-cui i predittori entrano nella formula può cambiare i risultati, quando i
-predittori sono correlati tra loro.
-:::
-
-## La rappresentazione grafica degli effetti
-
-Per visualizzare gli effetti stimati dal modello esistono comodi pacchetti
-dedicati. Con **sjPlot**:
-
-```{r}
-#| label: m3-sjplot
-#| layout-ncol: 2
-library(sjPlot)
-plot_model(m3, type = "eff", terms = "mom_iq")
-plot_model(m3, type = "eff", terms = "mom_hs")
-```
-
-Con **effects**:
-
-```{r}
-#| label: m3-effects
-#| fig-height: 4
-library(effects)
-plot(allEffects(m3))
-```
-
-Entrambi mostrano l'effetto di ciascun predittore *tenendo gli altri fissi* (ai
-loro valori medi o di riferimento), con le relative bande di confidenza.
-
-::: {.callout-note icon=false title="✏️ Esercizio 5 — Regressione multipla"}
-Stimate un modello con `mom_iq` e `mom_age` come predittori di `kid_score`.
-
-a. Scrivete l'equazione di regressione.
-b. Confrontate il coefficiente di `mom_iq` con quello che aveva nel modello
-   semplice `m1`: è cambiato molto?
-c. Confrontate l'$R^2$ con quello di `m1`: quanto aggiunge l'età della madre?
-d. Disegnate gli effetti del modello con `plot(allEffects(...))`.
+a. Calcolate la likelihood di ciascun valore: $p(D\,|\,\theta) = \theta^{75}(1-\theta)^{240}$.
+b. Calcolate $p(D)$ e la posterior; rappresentate prior, likelihood e posterior.
+c. Che cosa è successo alle credenze a priori? Perché la posterior si concentra
+   tutta su un solo valore?
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 5"}
 ```{r}
 #| label: sol-es5
-m5 <- lm(kid_score ~ mom_iq + mom_age, data = kidiq)
-coef(m5)
-summary(m5)$r.squared
-```
-
-a. $\hat{Y} = 17.60 + 0.60 \cdot \text{mom\_iq} + 0.39 \cdot \text{mom\_age}$.
-b. Il coefficiente di `mom_iq` passa da 0.610 a 0.604: praticamente invariato
-   (QI ed età della madre sono poco correlati, quindi i loro effetti non si
-   "rubano" variabilità a vicenda).
-c. $R^2$ passa da 0.201 a 0.204: l'età della madre, a parità di QI, aggiunge
-   pochissimo.
-
-```{r}
-#| label: sol-es5-eff
-#| fig-height: 4
-plot(allEffects(m5))
-```
-
-Notate la diversa ampiezza delle bande di confidenza: l'effetto del QI è stimato
-con molta più precisione di quello dell'età.
-:::
-
-# Gli effetti di interazione
-
-Nel modello `m3` abbiamo imposto che l'effetto del QI fosse **lo stesso** nei due
-gruppi di madri (rette parallele). Ma potrebbe non essere così: introduciamo allora
-l'**interazione** tra i predittori, che in R si indica con `*`:
-
-```{r}
-#| label: m4-fit
-m4 <- lm(kid_score ~ mom_iq * mom_hs, data = kidiq)
-coef(m4)
-```
-
-La formula `mom_iq * mom_hs` è una scorciatoia per
-`mom_iq + mom_hs + mom_iq:mom_hs`: effetti principali **più** interazione.
-L'equazione di regressione diventa
-
-$$
-\hat{Y} = -11.48 + 0.97 X + 51.27 D - 0.48\, DX
-$$
-
-Il termine $DX$ (prodotto tra dummy e QI) permette alle due rette di avere
-**pendenze diverse**:
-
-```{r}
-#| label: m4-plot
-ggplot(kidiq, aes(x = mom_iq, y = kid_score, colour = mom_hs)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(x = "QI della madre", y = "Punteggio del bambino", colour = "Diploma")
-```
-
-Sostituendo i valori di $D$ si ottengono le equazioni delle due rette:
-
-- madri non diplomate ($D = 0$): $\hat{Y} = -11.48 + 0.97 X$
-- madri diplomate ($D = 1$): $\hat{Y} = (-11.48 + 51.27) + (0.97 - 0.48) X = 39.79 + 0.49 X$
-
-L'interpretazione: tra le madri non diplomate il QI "pesa" molto di più (quasi un
-punto per punto di QI), mentre tra le diplomate la relazione è circa la metà. Con
-un'interazione, gli effetti principali **non si interpretano più da soli**:
-l'effetto di un predittore dipende dal livello dell'altro.
-
-## L'analisi degli effetti
-
-```{r}
-#| label: m4-anova
-anova(m4)
-summary(m4)$r.squared
-```
-
-Anche l'interazione risulta significativa, e il modello spiega circa il 23% della
-variabilità.
-
-## La rappresentazione grafica
-
-Con **sjPlot** (`type = "int"` mostra proprio l'interazione):
-
-```{r}
-#| label: m4-sjplot
-plot_model(m4, type = "int")
-```
-
-Con **effects**:
-
-```{r}
-#| label: m4-effects
-#| fig-height: 4
-plot(allEffects(m4))
-```
-
-::: {.callout-note icon=false title="✏️ Esercizio 6 — Interpretare un'interazione"}
-Usando i coefficienti di `m4` (senza usare `predict()`, prima):
-
-a. calcolate il punteggio previsto per un bambino con madre **non diplomata** con
-   QI = 100;
-b. idem, ma con madre **diplomata** con QI = 100;
-c. verificate i risultati con `predict()`;
-d. per quale valore di QI le due rette si incrociano?
-:::
-
-::: {.callout-tip collapse="true" title="Soluzione — Esercizio 6"}
-a. $D = 0$: $\hat{Y} = -11.48 + 0.97 \cdot 100 = 85.4$.
-b. $D = 1$: $\hat{Y} = 39.79 + 0.49 \cdot 100 = 88.3$.
-c. Con `predict()`:
-
-```{r}
-#| label: sol-es6
-predict(m4, newdata = data.frame(mom_iq = c(100, 100),
-                                 mom_hs = factor(c(0, 1))))
-```
-
-d. Le rette si incrociano dove $-11.48 + 0.97X = 39.79 + 0.49X$, cioè
-   $X = 51.27 / 0.48 \approx 106$ (provate a ricavarlo: è il rapporto tra il
-   coefficiente della dummy e quello dell'interazione, cambiato di segno).
-   Sotto QI ≈ 106 i figli di madri diplomate hanno punteggi attesi più alti,
-   sopra la relazione si inverte — anche se, guardando il grafico, le due rette
-   oltre quel punto sono molto vicine e le bande di confidenza si sovrappongono.
-:::
-
-# La valutazione dell'adattamento {#sec-adattamento}
-
-Stimare un modello è facile; la domanda successiva è: **quanto è buono?**
-In questa sezione vediamo tre strumenti complementari: l'analisi dei residui, il
-*predictive check* e gli indici di variabilità spiegata.
-
-## I residui del modello: gli scarti
-
-Per ragionare sull'adattamento conviene partire da un piccolo esempio simulato:
-una misura di stile genitoriale (`ParSty`) e una di comportamento del bambino
-(`ChildBeh`).
-
-```{r}
-#| label: scarti-dati
-set.seed(8)
-ParSty   <- runif(20, 5, 20)
-ChildBeh <- 2 + 1.1 * ParSty + rnorm(20, 0, 2.5)
-mod <- lm(ChildBeh ~ ParSty)
-```
-
-Data l'osservazione empirica $y_i$, possiamo individuare **tre tipi di deviazione o
-scarti**:
-
-1. lo scarto del punto osservato $y_i$ dalla media dei punteggi $\bar{y}$:
-   $\;y_i - \bar{y}$;
-2. lo scarto del punto teorico $\hat{y}_i$ (sulla retta) dalla media $\bar{y}$:
-   $\;\hat{y}_i - \bar{y}$;
-3. lo scarto del punto osservato $y_i$ dal suo corrispondente teorico sulla retta
-   di regressione: $\;y_i - \hat{y}_i$ — questo è il **residuo**.
-
-```{r}
-#| label: scarti-plot
-#| fig-height: 3.6
+#| fig-height: 3.4
 #| fig-width: 9
+theta <- seq(0, 1, by = 0.1)
+prior <- c(1, 3, 0, 4, 0, 0, 0, 1, 0, 0, 0) / 9
+
+like <- theta^75 * (1 - theta)^240
+pD   <- sum(like * prior)
+post <- like * prior / pD
+round(post, 4)
+
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
-titoli <- c(expression(y[i] - bar(y)),
-            expression(hat(y)[i] - bar(y)),
-            expression(y[i] - hat(y)[i]))
-for (tipo in 1:3) {
-  plot(ParSty, ChildBeh, pch = 19, col = "grey40", main = titoli[tipo])
-  abline(h = mean(ChildBeh), lty = 2)          # media di Y
-  abline(mod, col = "blue", lwd = 2)           # retta di regressione
-  if (tipo == 1) segments(ParSty, mean(ChildBeh), ParSty, ChildBeh,      col = "red")
-  if (tipo == 2) segments(ParSty, mean(ChildBeh), ParSty, fitted(mod),   col = "red")
-  if (tipo == 3) segments(ParSty, fitted(mod),   ParSty, ChildBeh,       col = "red")
+plot(theta, prior, type = "h", lwd = 4, ylim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(theta)), main = "Prior")
+plot(theta, like, type = "h", lwd = 4,
+     xlab = expression(theta), ylab = expression(p(D~"|"~theta)),
+     main = "Likelihood")
+plot(theta, post, type = "h", lwd = 4, ylim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(theta~"|"~D)),
+     main = "Posterior")
+par(mfrow = c(1, 1))
+```
+
+Con $n = 315$ la likelihood è estremamente concentrata attorno a 0.24 (lo abbiamo
+visto nell'Esercizio 4): tra gli 11 valori candidati, solo $\theta = 0.3$ e (molto
+meno) $\theta = 0.2$ hanno una verosimiglianza non trascurabile, e la prior
+assegnava a 0.3 il peso maggiore. La posterior si concentra quindi quasi tutta su
+0.3: con molti dati, la likelihood domina la prior. Il limite qui è la griglia
+troppo povera: il valore "vero" (circa 0.24) non era nemmeno tra i candidati.
+:::
+
+## Dalla griglia alla prior continua: la distribuzione Beta {#sec-beta}
+
+Una proporzione è una variabile **continua** in $[0, 1]$: le prior a griglia sono
+utili per capire il meccanismo, ma la scelta naturale è una distribuzione di
+probabilità continua su $[0, 1]$. La famiglia standard è la **distribuzione
+Beta**:
+
+$$
+p(\theta) = \text{Beta}(a, b) = \frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\,
+\theta^{a-1}(1 - \theta)^{b-1}
+$$
+
+I due parametri $a$ e $b$ controllano forma e concentrazione. Un modo pratico di
+interpretarli: $a - 1$ "successi immaginari" e $b - 1$ "insuccessi immaginari" già
+osservati prima di iniziare; la media è $a/(a+b)$.
+
+```{r}
+#| label: beta-famiglia
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+curve(dbeta(x, 1, 1), from = 0, to = 1, lwd = 2, ylim = c(0, 4.5),
+      xlab = expression(theta), ylab = expression(p(theta)))
+curve(dbeta(x, 0.5, 0.5), add = TRUE, lwd = 2, col = "grey50")
+curve(dbeta(x, 3, 3),     add = TRUE, lwd = 2, col = "blue")
+curve(dbeta(x, 10, 15),   add = TRUE, lwd = 2, col = "red")
+legend("top", bty = "n", lwd = 2,
+       col = c("black", "grey50", "blue", "red"),
+       legend = c("Beta(1, 1)", "Beta(0.5, 0.5)", "Beta(3, 3)", "Beta(10, 15)"))
+```
+
+- $\text{Beta}(1, 1)$ è la **uniforme**: massima incertezza, ogni proporzione è
+  ugualmente plausibile a priori;
+- $\text{Beta}(3, 3)$: crediamo blandamente che $\theta$ sia vicino a 0.5;
+- $\text{Beta}(10, 15)$: crediamo con una certa forza che $\theta$ sia attorno a
+  0.4;
+- più $a + b$ è grande, più la prior è **informativa** (concentrata).
+
+## La coniugazione Beta-binomiale {#sec-coniugazione}
+
+Ecco il motivo per cui la Beta è *la* prior delle proporzioni. Se
+
+- la prior è $p(\theta) = \text{Beta}(a, b)$, e
+- i dati sono $s$ successi e $f$ insuccessi,
+
+allora la posterior è ancora una Beta, con parametri aggiornati:
+
+$$
+p(\theta\,|\,D) = \text{Beta}(a + s,\; b + f)
+$$
+
+Basta *sommare* i successi osservati al primo parametro e gli insuccessi al
+secondo. Quando prior e posterior appartengono alla stessa famiglia si parla di
+**prior coniugata**: la Beta è la coniugata della verosimiglianza binomiale.
+
+Vediamola in azione, un animale alla volta. La sequenza osservata
+dall'ornitologo era F, F, F, F, M, F, M, F, F: partendo dalla prior uniforme
+$\text{Beta}(1, 1)$, dopo ogni osservazione la posterior
+$\text{Beta}(1 + m,\, 1 + f)$ diventa la prior per l'osservazione successiva:
+
+```{r}
+#| label: kiwi-sequenziale
+#| fig-height: 6.5
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+sequenza <- c(0, 0, 0, 0, 1, 0, 1, 0, 0)     # 1 = maschio, 0 = femmina
+m <- 0; f <- 0
+par(mfrow = c(3, 3), mar = c(2, 2, 2.5, 1))
+for (i in 1:9) {
+  if (sequenza[i] == 1) m <- m + 1 else f <- f + 1
+  curve(dbeta(x, 1 + m, 1 + f), from = 0, to = 1, lwd = 2,
+        xlab = "", ylab = "",
+        main = paste0("oss. ", i, ": ", ifelse(sequenza[i] == 1, "M", "F"),
+                      "  (m=", m, ", f=", f, ")"))
 }
 par(mfrow = c(1, 1))
 ```
 
-Nel primo pannello gli scarti ignorano completamente il modello (distanze dalla
-media); nel secondo ci sono le distanze *spiegate* dalla retta; nel terzo ciò che
-resta: i residui.
+Ogni femmina sposta la distribuzione verso sinistra, ogni maschio la tira
+indietro. Il risultato dopo 9 osservazioni è $\text{Beta}(3, 8)$ — esattamente
+quello che si ottiene aggiornando in un colpo solo con $s = 2$ e $f = 7$:
+nell'aggiornamento bayesiano l'ordine delle osservazioni non conta, e la
+posterior di oggi è la prior di domani.
 
-In R i residui di un modello si ottengono con `residuals()`:
+## Riassumere la posterior {#sec-riassumere}
+
+La posterior **è** il risultato dell'analisi bayesiana: una distribuzione completa,
+non un singolo numero. Il nostro compito è *riassumerla* in modo utile. Le sintesi
+principali sono di tre tipi.
+
+**1. Stime puntuali.** Per la $\text{Beta}(3, 8)$ dei kiwi:
 
 ```{r}
-#| label: residui-r
-round(residuals(mod), 3)
+#| label: posterior-puntuali
+a <- 3; b <- 8
+c(map     = (a - 1) / (a + b - 2),    # moda (maximum a posteriori)
+  mediana = qbeta(0.5, a, b),
+  media   = a / (a + b))
 ```
 
-## Le devianze
+MAP (il valore più probabile), mediana e media. Se la distribuzione è asimmetrica —
+come qui — le tre misure differiscono; con distribuzioni simmetriche coincidono.
 
-Sommando i quadrati degli scarti otteniamo tre nuove quantità:
+**2. Intervalli.** Un intervallo di **credibilità** (*credible interval*) al 90%
+è un intervallo che contiene il parametro con probabilità 0.9, *dato ciò che
+abbiamo osservato*. Il modo più semplice è usare i quantili della posterior:
 
-- **Devianza totale**: somma dei quadrati degli scarti delle osservazioni dalla
-  media
-  $$\text{SS}_{T} = \sum_i (y_i - \bar{y})^2$$
-- **Devianza di regressione** (o spiegata): somma dei quadrati degli scarti dei
-  punti sulla retta dalla media
-  $$\text{SS}_{R} = \sum_i (\hat{y}_i - \bar{y})^2$$
-- **Devianza residua**: somma dei quadrati degli scarti delle osservazioni dai
-  punti sulla retta
-  $$\text{SS}_{E} = \sum_i (y_i - \hat{y}_i)^2$$
-
-È facile verificare che
-
-$$
-\sum_i (\hat{y}_i - \bar{y})^2 + \sum_i (y_i - \hat{y}_i)^2 = \sum_i (y_i - \bar{y})^2
-$$
-
-ossia che la **devianza totale è la somma delle altre due**:
-$\text{SS}_T = \text{SS}_R + \text{SS}_E$.
-
-::: {.callout-note}
-L'algoritmo di stima dei parametri $\beta_0$ e $\beta_1$ (il metodo dei **minimi
-quadrati**, *Ordinary Least Squares*) ha come obiettivo proprio la minimizzazione
-della devianza residua: tra tutte le rette possibili, `lm()` sceglie quella che
-rende minima $\sum_i (y_i - \hat{y}_i)^2$.
-:::
-
-::: {.callout-note icon=false title="✏️ Esercizio 7 — Verificare la scomposizione della devianza"}
-Torniamo al modello `m1` (`kid_score ~ mom_iq`).
-
-a. Calcolate i residui "a mano" come `kidiq$kid_score - fitted(m1)` e verificate
-   che coincidono con `residuals(m1)`.
-b. Calcolate le tre devianze e verificate che $\text{SS}_T = \text{SS}_R + \text{SS}_E$.
-c. Calcolate $R^2 = \text{SS}_R / \text{SS}_T$ e confrontatelo con
-   `summary(m1)$r.squared`.
-:::
-
-::: {.callout-tip collapse="true" title="Soluzione — Esercizio 7"}
 ```{r}
-#| label: sol-es7
-res_mano <- kidiq$kid_score - fitted(m1)
-all.equal(res_mano, residuals(m1))
-
-SST <- sum((kidiq$kid_score - mean(kidiq$kid_score))^2)
-SSR <- sum((fitted(m1) - mean(kidiq$kid_score))^2)
-SSE <- sum(residuals(m1)^2)
-c(SST = SST, SSR = SSR, SSE = SSE)
-SSR + SSE        # = SST
-
-SSR / SST
-summary(m1)$r.squared
+#| label: posterior-quantili
+qbeta(c(0.05, 0.95), 3, 8)     # intervallo quantile-based al 90%
 ```
 
-Tutto torna: i residui coincidono, la devianza totale è la somma delle altre due e
-il rapporto $\text{SS}_R / \text{SS}_T$ è esattamente l'$R^2$ riportato da
-`summary()`.
-:::
+Un'alternativa è l'intervallo **HPD** (*Highest Posterior Density*, o HPDI): il
+più *stretto* intervallo che contiene il 90% di probabilità. Con distribuzioni
+asimmetriche i due non coincidono:
 
-## La valutazione dei residui
+```{r}
+#| label: posterior-hpd
+library(HDInterval)
+set.seed(11)
+campioni_post <- rbeta(100000, 3, 8)
+hdi(campioni_post, credMass = 0.90)
+```
 
-I residui del modello rappresentano le differenze tra i valori osservati ($y$) e i
-valori attesi dal modello ($\hat{y}$, sulla retta):
 
-$$
-r_i = y_i - X_i\hat{\beta}
-$$
+```{r}
+curve(dbeta(x, 3, 8))
+abline(v = hdi(campioni_post, credMass = 0.90), col = "green")
+abline(v = qbeta(c(0.05, 0.95), 3, 8), col = "red")
+```
 
-Rappresentando graficamente la distribuzione dei residui possiamo valutare la bontà
-del modello. La regola d'oro:
+
+**3. Probabilità di ipotesi.** Qualunque affermazione su $\theta$ ha ora una
+probabilità, calcolabile come area sotto la posterior. La proporzione di maschi è
+inferiore a 0.5?
+
+```{r}
+#| label: posterior-ipotesi
+pbeta(0.5, 3, 8)          # Pr(theta < 0.5 | D)
+1 - pbeta(0.5, 3, 8)      # Pr(theta > 0.5 | D)
+```
 
 ::: {.callout-important}
-Se il modello è buono, i residui devono distribuirsi **a caso**: nessuna struttura,
-nessuna curvatura, nessun imbuto, nessun gruppo di punti che si comporta in modo
-diverso dagli altri. Qualsiasi *pattern* nei residui è informazione che il modello
-non ha catturato.
+Confrontate con l'intervallo di **confidenza** frequentista: "se ripetessimo il
+campionamento infinite volte, il 95% degli intervalli così costruiti conterrebbe il
+valore vero". Sul *singolo* intervallo calcolato non è ammessa alcuna affermazione
+probabilistica: il parametro ci sta dentro oppure no. L'intervallo di credibilità
+dice invece esattamente ciò che tutti vorrebbero dire: "il parametro sta qui dentro
+con probabilità 0.95, dati i dati". 
 :::
 
-## Casi anomali e casi influenti {#sec-anomali}
+## Quanto conta la prior? {#sec-prior-dati}
 
-Non tutte le osservazioni "strane" sono uguali. Conviene distinguere:
-
-- **outlier**: un'osservazione con $Y$ anomalo rispetto a ciò che il modello
-  prevede per il suo $X$ (residuo grande);
-- **caso a leva alta** (*leverage*): un'osservazione con $X$ estremo, lontano dal
-  grosso dei dati — *potenzialmente* influente;
-- **caso influente**: un'osservazione che, da sola, **cambia sensibilmente le
-  stime** del modello. Tipicamente: leva alta **e** residuo grande insieme.
-
-Vediamolo con dati simulati: in ciascun pannello aggiungiamo ai dati (grigi) un
-solo punto rosso e confrontiamo la retta stimata con il punto (rossa, continua) e
-senza (nera, tratteggiata):
+La posterior è un compromesso tra prior e dati. Vediamo come cambia il compromesso
+al variare dei due. Prima: stessi dati (2 su 9), prior sempre più informative (attorno a 0.50):
 
 ```{r}
-#| label: anomali-plot
-#| fig-height: 3.6
+#| label: prior-informativa
+#| fig-height: 3.4
 #| fig-width: 9
-set.seed(20)
-x <- rnorm(25, 10, 1.5)
-y <- 2 + x + rnorm(25, 0, 1)
-
-extra  <- rbind(c(10, 22),   # outlier: X centrale, Y anomalo
-                c(18, 20),   # leva alta: X estremo, Y coerente
-                c(18, 9))    # outlier influente: X estremo, Y anomalo
-titoli <- c("Outlier", "Caso a leva alta", "Outlier influente")
+#| code-fold: true
+prior_a <- c(1, 10, 50)       # tre prior: Beta(1,1), Beta(10,10), Beta(50,50)
+prior_b <- c(1, 10, 50)
 
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
 for (i in 1:3) {
-  xx <- c(x, extra[i, 1]); yy <- c(y, extra[i, 2])
-  plot(xx, yy, pch = 19, col = c(rep("grey60", 25), "red"),
-       xlab = "X", ylab = "Y", main = titoli[i])
-  abline(lm(y ~ x),   lty = 2, lwd = 2)               # senza il punto
-  abline(lm(yy ~ xx), col = "red", lwd = 2)           # con il punto
+  a <- prior_a[i]; b <- prior_b[i]
+  curve(dbeta(x, a + 2, b + 7), from = 0, to = 1, lwd = 2, col = "red",
+        xlab = expression(theta), ylab = "densita di probabilita",
+        main = paste0("Beta(", a, ", ", b, ") + dati"), ylim = c(0, 8))
+  curve(dbeta(x, a, b), add = TRUE, lwd = 2, lty = 2)
+  legend("topright", bty = "n", lwd = 2, lty = c(2, 1),
+         col = c("black", "red"), legend = c("prior", "posterior"))
 }
-par(mfrow = c(1, 1))
 ```
 
-- l'**outlier** con $X$ centrale sposta un po' l'intercetta ma quasi per niente la
-  pendenza;
-- il caso a **leva alta** ma coerente con la retta non cambia praticamente nulla
-  (anzi, "stabilizza" la stima);
-- l'**outlier influente** (X estremo + Y anomalo) ruota vistosamente la retta: è
-  questo il caso davvero pericoloso.
+Con la prior uniforme la posterior segue i dati $\text{Beta}(1,1)$; con $\text{Beta}(50, 50)$ — che equivale a *98 osservazioni immaginarie* bilanciate — 9 animali osservati spostano pochissimo. 
 
-Il quarto pannello della diagnostica (`Residuals vs Leverage`, con la **distanza di
-Cook**) serve proprio a individuare questi casi. Guardiamo la diagnostica completa
-del modello con interazione:
+Seconda prova: stessa prior $\text{Beta}(50, 50)$, dati sempre più numerosi con la
+stessa proporzione osservata:
 
 ```{r}
-#| label: m4-diag
-#| fig-height: 7
-par(mfrow = c(2, 2))
-plot(m4)
-par(mfrow = c(1, 1))
+#| label: dati-crescenti
+#| fig-height: 3.4
+#| fig-width: 9
+#| code-fold: true
+
+z <- c(2, 20, 200)          # maschi osservati
+N <- c(9, 90, 900)          # animali osservati
+
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
+for (i in 1:3) {
+  curve(dbeta(x, 50 + z[i], 50 + N[i] - z[i]), from = 0, to = 1, lwd = 2,
+        col = "red", xlab = expression(theta), ylab = "densita di probabilita",
+        main = paste0(z[i], " maschi su ", N[i]))
+  curve(dbeta(x, 50, 50), from = 0, to = 1, lwd = 2,lty = 2, add = TRUE,
+        col = "black", xlab = expression(theta), ylab = "densita di probabilita")
+}
 ```
 
-## Il predictive check
+All'aumentare di $n$ la posterior si stringe attorno alla proporzione osservata:
+**con molti dati la likelihood domina**, e la scelta della prior diventa sempre
+meno rilevante. Con pochi dati, viceversa, la prior conta molto — ci torneremo
+nella @sec-prior-scelta.
 
-Il metodo più importante per valutare l'adattamento di un modello consiste nel
-**simulare dati dal modello** e confrontarli con i dati osservati:
+## Prevedere nuovi dati: la distribuzione predittiva {#sec-predittiva}
 
-- se il modello è buono, i dati simulati dovrebbero assomigliare a quelli
-  osservati;
-- viceversa, se il modello genera dati molto diversi da quelli osservati, non è un
-  buon modello per quei dati.
+Stimare i parametri non è l'unico obiettivo dell'inferenza: spesso vogliamo
+**prevedere le prossime osservazioni**. Un esempio classico (Hoff, 2009): a 129
+donne di 65 anni o più viene chiesto se si sentono generalmente felici; 118
+rispondono di sì. Con prior uniforme, la posterior è
+$\text{Beta}(1 + 118,\; 1 + 11) = \text{Beta}(119, 12)$.
 
-Il pacchetto **performance** rende l'operazione immediata:
+Qual è la probabilità che la **prossima** intervistata si dichiari felice?
+Attenzione: non basta "usare la stima di $\theta$", perché $\theta$ è incerto. La
+risposta bayesiana media su tutta la posterior e, nel modello binomiale, il
+risultato è proprio la media a posteriori:
+
+$$
+Pr(\tilde{y} = 1\,|\,D) = \int \theta\; p(\theta\,|\,D)\, d\theta = E(\theta\,|\,D)
+= \frac{119}{131} \approx 0.91
+$$
 
 ```{r}
-#| label: m4-ppcheck
-library(performance)
-check_predictions(m4)
+#se la mia posterior è una beta(119,12)
+post <- rbeta(1e4, 119, 12)
+# la media ci dà la probabilità che la prox sia felice
+mean(post) # che si può ottenere analiticamente con 
+119/131
 ```
 
-Ogni curva sottile è la distribuzione di un dataset *simulato* dal modello; la
-curva in evidenza è quella dei dati osservati. Qui le curve simulate ricalcano
-abbastanza bene quella osservata: il modello riproduce in modo ragionevole la forma
-della distribuzione dei punteggi.
 
-::: {.callout-note icon=false title="✏️ Esercizio 8 — Predictive check a confronto"}
-Eseguite `check_predictions()` sul modello `m2` (solo `mom_hs`) e sul modello `m4`
-(QI × diploma). Quale dei due riproduce meglio i dati osservati? Era prevedibile,
-guardando gli $R^2$?
+E se intervistassimo **altre 20 donne**, quante si dichiarerebbero felici? La
+risposta è un'intera distribuzione — la **distribuzione predittiva a posteriori**
+(*posterior predictive distribution*) — che possiamo ottenere per simulazione,
+propagando l'incertezza in due passi: estraggo un valore di $\theta$ dalla
+posterior e, con quel $\theta$, simulo un nuovo campione:
+
+```{r}
+#| label: felicita-predittiva
+set.seed(9)
+theta_draw <- rbeta(100000, 119, 12)  # incertezza su theta
+z_nuove <- rbinom(100000, size = 20, prob = theta_draw)  # nuovi dati simulati
+
+plot(table(z_nuove) / 100000, lwd = 3,
+     xlab = "Numero di donne felici su 20 nuove interviste",
+     ylab = "Probabilita")
+mean(z_nuove >= 18)     # Pr(almeno 18 su 20 | D)
+```
+
+
+
+::: {.callout-note}
+Questa è la logica del **posterior predictive check** che conosciamo già dai
+modelli lineari (`check_predictions()`) e che ritroveremo con `pp_check()`:
+simulare dati dalla distribuzione predittiva e confrontarli con quelli osservati.
+Se il modello è buono, i dati veri devono sembrare "uno dei tanti" dataset
+simulati.
+:::
+
+::: {.callout-note icon=false title="✏️ Esercizio 6 — Il sondaggio"}
+Riprendiamo il sondaggio della @sec-problema: 75 successi su 315,
+prior uniforme $\text{Beta}(1, 1)$.
+
+a. Scrivete la posterior di $\theta$.
+b. Calcolate media e mediana della posterior.
+c. Calcolate l'intervallo di credibilità al 95% (quantile-based) e confrontatelo
+   con l'intervallo di confidenza di `binom.test(75, 315)`: sono simili? La loro
+   *interpretazione* è la stessa?
+d. Calcolate $Pr(\theta \ge 0.5\,|\,D)$ e $Pr(\theta < 0.3\,|\,D)$.
+e. Scrivete una frase di conclusione "da articolo".
+:::
+
+::: {.callout-tip collapse="true" title="Soluzione — Esercizio 6"}
+```{r}
+#| label: sol-es6
+a <- 1 + 75; b <- 1 + 240
+
+c(media   = a / (a + b),
+  mediana = qbeta(0.5, a, b),
+  map     = (a - 1) / (a + b - 2))
+
+qbeta(c(0.025, 0.975), a, b)                # credible interval 95%
+binom.test(75, 315)$conf.int                # confidence interval 95%
+
+1 - pbeta(0.5, a, b)                        # Pr(theta >= 0.5 | D)
+pbeta(0.3, a, b)                            # Pr(theta < 0.3 | D)
+```
+
+a. $\text{Beta}(1 + 75,\; 1 + 240) = \text{Beta}(76, 241)$.
+b. Media, mediana e MAP sono tutte attorno a 0.24: con $n = 315$ la posterior è
+   quasi simmetrica.
+c. Numericamente quasi identici (con $n$ grande e prior uniforme succede spesso),
+   ma l'interpretazione è diversa: solo per l'intervallo di credibilità possiamo
+   dire che $\theta$ vi appartiene con probabilità 0.95.
+d. $Pr(\theta \ge 0.5\,|\,D)$ è praticamente 0; $Pr(\theta < 0.3\,|\,D) \approx 0.99$.
+e. Ad esempio: "la proporzione stimata di studenti a cui piace la statistica è
+   0.24, intervallo di credibilità al 95% [0.19; 0.29]; la probabilità che la
+   proporzione superi è < .001". 
+:::
+
+# Il caso normale {#sec-normale}
+
+Il modello probabilistico più usato per dati quantitativi è la normale. Il problema
+di inferenza ora ha **due parametri**: la media $\mu$ e la deviazione standard
+$\sigma$.
+
+$$
+y_i \sim \mathcal{N}(\mu, \sigma)
+$$
+
+## I dati: un sospetto deficit cognitivo
+
+Abbiamo valutato le funzioni cognitive di 10 pazienti con un test standardizzato
+(nella popolazione generale: media 100, deviazione standard 15). C'è il sospetto di
+un deficit cognitivo. I punteggi osservati:
+
+```{r}
+#| label: qi-dati
+y <- c(73, 101, 74, 76, 112, 71, 71, 75, 97, 67)
+c(media = mean(y), ds = sd(y), n = length(y))
+```
+
+La domanda: che cosa possiamo dire di $\mu$, la media della popolazione da cui
+provengono questi pazienti? In particolare: quanto è probabile che $\mu < 90$?
+
+## Caso 1: $\sigma$ nota — la coniugazione normale-normale {#sec-normale-normale}
+
+Cominciamo dal caso semplice in cui assumiamo $\sigma = 15$ nota (quella del test)
+e stimiamo solo $\mu$. Il modello bayesiano completo:
+
+$$
+\mu \sim \mathcal{N}(100, 10) \qquad
+y_i \sim \mathcal{N}(\mu, 15)
+$$
+
+La prior $\mathcal{N}(100, 10)$ dice: prima di vedere i dati, il valore più
+plausibile per $\mu$ è quello della popolazione generale (100), ma con incertezza
+sostanziale (deviazione standard 10).
+
+**prior normale + likelihood normale = posterior normale**. Le formule di aggiornamento sono più leggibili in termini di **precisione**, cioè il reciproco della varianza ($1/\tau^2$): le precisioni si *sommano*,
+
+$$
+\frac{1}{\tau_1^2} = \frac{1}{\tau_0^2} + \frac{n}{\sigma^2}
+$$
+
+e la media a posteriori è una **media pesata** tra media della prior e media
+campionaria, con pesi proporzionali alle rispettive precisioni:
+
+$$
+\mu_1 = \frac{\dfrac{1}{\tau_0^2}\,\mu_0 + \dfrac{n}{\sigma^2}\,\bar{y}}
+{\dfrac{1}{\tau_0^2} + \dfrac{n}{\sigma^2}}
+$$
+
+Calcoliamola a mano:
+
+```{r}
+#| label: normale-mano
+mu0  <- 100; tau0 <- 10        # prior
+sigma <- 15                    # ds nota
+n <- length(y); ybar <- mean(y)
+
+prec_prior <- 1 / tau0^2       # precisione della prior
+prec_dati  <- n / sigma^2      # precisione dei dati
+
+mu1  <- (prec_prior * mu0 + prec_dati * ybar) / (prec_prior + prec_dati)
+tau1 <- sqrt(1 / (prec_prior + prec_dati))
+c(media_post = mu1, ds_post = tau1)
+```
+
+
+```{r}
+#| label: normale-plot
+#| code-fold: true
+
+mu_griglia <- seq(70, 110, by = 0.1)
+
+plot(mu_griglia, dnorm(mu_griglia, mu1, tau1), type = "l", lwd = 4, col = "blue",
+     xlab = expression(mu), ylab = expression(p(mu~"|"~D)))
+curve(dnorm(x, 100, 10), add = TRUE, lwd = 2, lty = 2)
+abline(v = mean(y), col = "red", add = TRUE)
+legend("topleft", bty = "n", lwd = c(4, 2, 2), lty = c(1, 1, 2),
+       col = c("blue", "black"),
+       legend = c("posterior", "prior"))
+```
+
+Osservate la posizione della posterior: la media campionaria è 81.7, la prior era
+centrata su 100, la posterior si piazza a `r round(mu1, 1)` circa — *tra* le due,
+ma molto più vicina ai dati, perché con $n = 10$ la precisione dei dati
+($10/225 \approx 0.044$) è oltre quattro volte quella della prior ($0.01$). Questo
+"tiro verso la prior" si chiama **shrinkage**: con pochi dati la stima viene
+regolarizzata verso ciò che è plausibile a priori, con molti dati sparisce.
+
+## Caso 2: $\mu$ e $\sigma$ entrambi ignoti {#sec-griglia-2d}
+
+Nel caso realistico anche $\sigma$ è ignota. Il modello diventa:
+
+$$
+\mu \sim \mathcal{N}(100, 10) \qquad
+\sigma \sim \text{Uniforme}(0, 30) \qquad
+y_i \sim \mathcal{N}(\mu, \sigma)
+$$
+
+La posterior ora è una distribuzione **congiunta bidimensionale**
+$p(\mu, \sigma\,|\,D)$ e non ha una forma analitica comoda. Calcoliamo prior × likelihood su una griglia di *coppie*
+$(\mu, \sigma)$.
+
+```{r}
+#| label: griglia-2d
+#| code-fold: true
+mu_griglia    <- seq(65, 110, length.out = 200)
+sigma_griglia <- seq(5, 40, length.out = 200)
+
+POST <- matrix(NA, nrow = 200, ncol = 200)   # righe: mu; colonne: sigma
+for (i in 1:200) {
+  for (j in 1:200) {
+    prior_ij  <- dnorm(mu_griglia[i], 100, 10) * dunif(sigma_griglia[j], 0, 40)
+    like_ij   <- prod(dnorm(y, mu_griglia[i], sigma_griglia[j]))
+    POST[i, j] <- prior_ij * like_ij
+  }
+}
+POST <- POST / sum(POST)                     # normalizzo
+
+contour(mu_griglia, sigma_griglia, POST,
+        xlab = expression(mu), ylab = expression(sigma), drawlabels = FALSE)
+```
+
+Le curve di livello mostrano la regione di coppie $(\mu, \sigma)$ credibili. Per
+ottenere le distribuzioni **marginali** dei singoli parametri basta sommare
+sull'altro (esattamente come nella tabella della @sec-congiunte):
+
+```{r}
+#| label: griglia-2d-marginali
+#| fig-height: 3.8
+#| fig-width: 8
+#| code-fold: true
+post_mu    <- rowSums(POST)      # marginalizzo su sigma
+post_sigma <- colSums(POST)      # marginalizzo su mu
+
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+plot(mu_griglia, post_mu, type = "l", lwd = 2,
+     xlab = expression(mu), ylab = expression(p(mu~"|"~D)))
+plot(sigma_griglia, post_sigma, type = "l", lwd = 2,
+     xlab = expression(sigma), ylab = expression(p(sigma~"|"~D)))
+```
+
+
+
+# Campionare dalla posterior: MCMC {#sec-mcmc}
+
+## Perché campionare
+
+Se non conosciamo la forma analitica di una distribuzione, possiamo
+**approssimarla estraendo campioni da essa**. Con abbastanza campioni,
+ricostruiamo la densità, la media dei campioni stima la media, i
+quantili stimano i quantili, e ogni probabilità diventa una semplice *proporzione di campioni*:
+
+```{r}
+#| label: sampling-idea
+#| fig-height: 6.5
+set.seed(15)
+numerosita <- c(10, 100, 1000, 100000)
+
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+for (n in numerosita) {
+  campioni <- rbeta(n, 12, 4)     # campiono dalla posterior Beta(12, 4)
+  hist(campioni, freq = FALSE, breaks = 30, xlim = c(0, 1),
+       main = paste("n =", n), xlab = expression(theta), ylab = "densita")
+  curve(dbeta(x, 12, 4), add = TRUE, lwd = 2, col = "red")
+}
+```
+
+(La curva rossa è la $\text{Beta}(12, 4)$, cioè la posterior dell'accuratezza di
+un soggetto con prior uniforme e 11 risposte corrette su 14 prove: con 100000
+campioni l'istogramma la ricalca perfettamente.)
+
+Qui abbiamo potuto usare `rbeta()` perché la posterior era nota. Il problema vero
+è: come si campiona da una posterior di cui conosciamo solo
+$\text{prior} \times \text{likelihood}$, a meno di una costante? La risposta sono
+gli algoritmi **MCMC** (*Markov Chain Monte Carlo*): costruiscono una "catena" di
+valori che si muove nello spazio dei parametri e che, a regime, visita ogni regione
+con frequenza proporzionale alla sua probabilità a posteriori. I campioni MCMC
+hanno però una particolarità: ogni passo dipende dal precedente (per questo
+"catena"), quindi i campioni sono **correlati tra loro** — ne riparleremo tra
+poco a proposito di diagnostiche.
+
+
+![Immagine realizzata dal prof. Pastore](img/mc-pastore.png)
+
+> Lambert, B. (2018). A Student’s Guide to Bayesian Statistics. London, UK: SAGE;
+
+
+## I software {#sec-software}
+
+Storicamente: **BUGS** (anni '90), poi **JAGS**, oggi soprattutto **Stan** — che
+prende il nome da Stanislaw Ulam, coinventore dei metodi Monte Carlo, e usa un
+algoritmo MCMC moderno ed efficiente (NUTS, *No-U-Turn Sampler*). In R ci sono
+diversi livelli di accesso a Stan:
+
+- **rstan** / **cmdstanr**: si scrive il modello direttamente nel linguaggio Stan
+  (massima flessibilità);
+- **rstanarm**: modelli di regressione *precompilati*, sintassi identica a
+  `lm()`/`glm()` — immediato;
+- **brms**: sintassi tipo `lm()`, genera e compila codice Stan su misura; il più
+  flessibile tra quelli "a formula".
+
+In questa dispensa usiamo soprattutto **rstanarm**: la funzione `stan_glm()` è
+l'equivalente bayesiano di `lm()`/`glm()`, e non richiede di compilare nulla. A
+fine capitolo proveremo la stessa analisi con **brms**.
+
+## Un confronto tra due gruppi {#sec-due-gruppi}
+
+16 adolescenti (8 maschi e 8 femmine) valutati sulla
+propensione al gioco d'azzardo (punteggi più alti = maggiore propensione). Ci
+chiediamo se ci sia una differenza di genere.
+
+```{r}
+#| label: gioco-dati
+Ym <- c(8.8, 19.3, 15.7, 14.6, 8.2, 7.6, 8.7, 8.4)     # maschi
+Yf <- c(4.8, 10.6, 11.7, 10.1, 4.8, 8.2, 8.5, 6.8)     # femmine
+
+gioco <- data.frame(sesso     = rep(c("f", "m"), each = 8),
+                    punteggio = c(Yf, Ym))
+tapply(gioco$punteggio, gioco$sesso, mean)
+```
+
+L'approccio NHST è il test $t$ (che, come sappiamo dalla dispensa sui modelli
+lineari, è un modello lineare con un predittore dicotomico):
+
+```{r}
+#| label: gioco-ttest
+t.test(Ym, Yf, alternative = "greater", var.equal = TRUE)
+```
+
+$p = 0.049$: "significativo" per un soffio. Tutto quello che possiamo dire è:
+rigettiamo $H_0$ al 5%.
+
+Versione bayesiana dello *stesso* modello lineare, con `stan_glm()`:
+
+```{r}
+#| label: gioco-stanglm
+#| results: hide
+library(rstanarm)
+fit_gioco <- stan_glm(punteggio ~ sesso, data = gioco, seed = 1)
+```
+
+```{r}
+#| label: gioco-summary
+summary(fit_gioco, digits = 2)
+```
+
+La sintassi è identica a `lm()`; dietro le quinte, Stan ha campionato dalla
+posterior congiunta di tutti i parametri: intercetta (la media delle femmine),
+coefficiente `sessom` (la differenza maschi − femmine, chiamiamola $\delta$) e
+`sigma`. Di default vengono lanciate 4 catene da 2000 iterazioni, di cui le prime
+1000 di riscaldamento (*warmup*) vengono scartate: restano $4 \times 1000 = 4000$
+draws dalla posterior.
+
+## Le diagnostiche MCMC {#sec-diagnostiche}
+
+Prima di interpretare i risultati dobbiamo chiederci: **il campionamento ha
+funzionato?** Le quantità da guardare (nel blocco `MCMC diagnostics` del summary):
+
+- **Rhat**: si lanciano più catene in parallelo, da punti di partenza diversi, e
+  si confrontano. Se tutte hanno esplorato la stessa regione, $\hat{R} \approx 1$
+  (idealmente $\le 1.01$): convergenza raggiunta. Se $\hat{R} > 1$, i risultati non
+  sono affidabili;
+- **n_eff** (*effective sample size*): i draws MCMC sono correlati, quindi 4000
+  draws non valgono 4000 campioni indipendenti — ne "valgono" n_eff. Più è alto,
+  più le stime sono precise (indicativamente, almeno qualche centinaio);
+- il **trace plot**: l'evoluzione di ciascuna catena nel tempo. Se le catene si
+  sovrappongono oscillando attorno allo stesso valore — il classico "bruco pelosetto"
+  (*fuzzy caterpillar*) — è un buon segno:
+
+```{r}
+#| label: gioco-trace
+library(bayesplot)
+mcmc_trace(fit_gioco, pars = c("sessom", "sigma"))
+```
+
+Qui è tutto in ordine: Rhat = 1, n_eff alti, catene ben mescolate.
+
+## Usare la posterior {#sec-usare-posterior}
+
+Estraiamo le draws e trattiamoli per quello che sono: 4000 valori plausibili di ciascun parametro, con frequenza proporzionale alla loro credibilità a posteriori.
+
+```{r}
+#| label: gioco-post
+POST <- as.data.frame(fit_gioco)
+head(round(POST, 2))
+dim(POST)
+```
+
+La distribuzione a posteriori della differenza $\delta$:
+
+```{r}
+#| label: gioco-post-delta
+mcmc_areas(fit_gioco, pars = "sessom", prob = 0.90)
+```
+
+E ogni ipotesi che ci interessa diventa una proporzione di draws:
+
+```{r}
+#| label: gioco-ipotesi
+mean(POST$sessom > 0)              # Pr(delta > 0 | D)
+mean(POST$sessom > 2)              # Pr(delta > 2 | D)
+mean(POST$sessom > 2 & POST$sessom < 4)   # Pr(2 < delta < 4 | D)
+```
+
+Confrontate con l'output del test $t$: là un p-value e una decisione binaria; qui
+la probabilità che la differenza sia positiva (circa 0.95), che superi 2 punti
+(circa 0.74), che stia in qualunque intervallo ci interessi. Con un metodo
+bayesiano possiamo calcolare $Pr(\delta > 0\,|\,D)$; con NHST questa probabilità
+non esiste: $H_1$ è vera oppure falsa, punto.
+
+::: {.callout-note icon=false title="✏️ Esercizio 8 — Interrogare la posterior"}
+Sempre sul modello `fit_gioco`:
+
+a. calcolate l'intervallo di credibilità HPD al 89% per $\delta$ con `hdi()`
+   (pacchetto HDInterval) applicato a `POST$sessom`;
+b. calcolate $Pr(\delta > 5\,|\,D)$: una differenza di almeno 5 punti è credibile?
+c. calcolate la probabilità che la deviazione standard residua sia maggiore di 4;
+d. confrontate `posterior_interval(fit_gioco, prob = 0.89)` con il risultato di
+   (a): perché non coincidono esattamente?
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 8"}
 ```{r}
 #| label: sol-es8
-check_predictions(m2)
+hdi(POST$sessom, credMass = 0.89)
+mean(POST$sessom > 5)
+mean(POST$sigma > 4)
+posterior_interval(fit_gioco, prob = 0.89)
 ```
 
-Con il solo diploma della madre il modello può prevedere solo **due** valori attesi
-(uno per gruppo): le distribuzioni simulate risultano più "lisce" e meno capaci di
-seguire la forma dei dati osservati rispetto a `m4`, che usando anche il QI genera
-una gamma di previsioni molto più ricca. Coerente con gli $R^2$: 0.056 contro
-0.230. Il predictive check rende *visibile* quello che gli indici riassumono in un
-numero.
+a. L'HPD al 89% va da circa 0.1 a circa 6.4: la differenza è credibilmente
+   positiva ma la sua entità è stimata con molta incertezza ($n = 16$!).
+b. $Pr(\delta > 5\,|\,D) \approx 0.18$: possibile ma poco probabile.
+c. Circa 0.36: anche su $\sigma$ abbiamo un'intera distribuzione, non un numero.
+d. `posterior_interval()` usa i quantili centrali (5.5% e 94.5%), non l'HPD: con
+   posterior leggermente asimmetriche i due intervalli differiscono un po'. Con
+   distribuzioni simmetriche coincidono.
 :::
 
-## Variabilità residua e variabilità spiegata {#sec-variabilita}
+## La stessa analisi con `brms` {#sec-brms}
 
-### La variabilità residua: $\sigma$
-
-Il parametro $\sigma$ (**Residual standard error** nell'output di `summary()`)
-esprime la variabilità dei residui.
+Prima di passare alle applicazioni, rifacciamo lo stesso modello con **brms**. A
+differenza di rstanarm, brms genera e **compila** codice Stan su misura: la prima
+stima richiede circa un minuto di compilazione, in cambio di una flessibilità
+molto maggiore (modelli multilivello, famiglie di distribuzioni arbitrarie...).
+La sintassi non cambia:
 
 ```{r}
-#| label: sigma-m4
-sigma(m4)
+#| label: gioco-brms
+#| results: hide
+library(brms)
+fit_gioco_brm <- brm(punteggio ~ sesso, data = gioco, seed = 1,
+                     file = "objects/fit_gioco_brm",
+                     file_refit = "on_change")
 ```
 
-Nel modello `m4`, $\sigma \approx 18$ significa che il modello predice la variabile
-dipendente con un'accuratezza media di circa 18 punti: di tanto, in media, i
-punteggi osservati si discostano da quelli attesi. Sta a noi giudicare se, sulla
-scala della variabile, è una precisione accettabile.
+L'argomento `file` salva il modello compilato e stimato in un file `.rds` (qui in
+una cartella `objects`): alle esecuzioni successive brms lo ricarica invece di
+ricompilare; con `file_refit = "on_change"` ristima solo se modello, dati o prior
+sono cambiati.
 
-### La variabilità spiegata: $R^2$ e $\eta^2$
+```{r}
+#| label: gioco-brms-summary
+summary(fit_gioco_brm)
+```
 
-Il fit del modello può essere riassunto sfruttando la relazione tra devianza
-residua e devianza totale:
+Ritroviamo tutte le quantità note: stime (`Estimate`), intervalli di credibilità
+(`l-95% CI`, `u-95% CI`), `Rhat` e le due versioni dell'ESS. In più, per
+interrogare la posterior c'è la comoda funzione `hypothesis()`:
+
+```{r}
+#| label: gioco-brms-hypothesis
+hypothesis(fit_gioco_brm, "sessom > 0")
+```
+
+`Post.Prob` è la nostra $Pr(\delta > 0\,|\,D)$, calcolata come proporzione di
+draws esattamente come l'abbiamo calcolata a mano; `Evid.Ratio` è il rapporto
+$Pr/(1 - Pr)$, cioè gli *odds* a posteriori dell'ipotesi.
+
+E le prior? A differenza di rstanarm — che le sceglie deboli e riscalate sui
+dati — con brms vanno controllate. `get_prior()` mostra le prior in uso (o
+quelle che verrebbero usate, se chiamata su formula e dati prima di stimare):
+
+```{r}
+#| label: gioco-brms-getprior
+get_prior(fit_gioco_brm)
+```
+
+Ogni riga è una prior; le colonne principali si leggono così:
+
+- **`prior`** → la distribuzione assegnata al parametro; `(flat)` = prior piatta
+  (vedi sotto);
+- **`class`** → la categoria di parametro: `b` per i coefficienti dei predittori
+  (le "pendenze"), `Intercept` per l'intercetta, `sigma` per la deviazione
+  standard residua;
+- **`coef`** → il coefficiente specifico dentro la classe; se vuoto, la prior
+  vale per *tutti* i coefficienti di quella classe;
+- **`lb`**, **`ub`** → *lower/upper bound*, i limiti del parametro (`sigma` ha
+  `lb = 0`: giustamente, una deviazione standard non può essere negativa);
+- **`source`** → `default` (scelta da brms) oppure `user` (specificata da voi).
+
+::: {.callout-note collapse="true"}
+### La prior `(flat)`
+
+Una prior *flat* (piatta) assegna la stessa credibilità a qualunque valore del
+parametro, da $-\infty$ a $+\infty$. È detta **impropria**: non è una vera
+distribuzione di probabilità, perché l'area sotto la curva è infinita. In
+pratica equivale a dire "non ho alcuna informazione a priori", lasciando che
+siano interamente i dati a determinare la stima. È il default di brms per la
+classe `b`. Funziona, ma una prior anche solo debolmente informativa è quasi
+sempre preferibile (@sec-prior-scelta) — e per il Bayes Factor le prior piatte
+sono proprio inammissibili (@sec-bridge).
+:::
+
+::: {.callout-important}
+### Ma che cos'è quella prior sull'intercetta?
+
+Per rendere il campionamento più efficiente, brms **centra internamente i
+predittori** attorno alla loro media. Di conseguenza la prior su `Intercept` non
+riguarda il valore atteso della risposta quando i predittori valgono 0, ma
+quando sono **al loro valore medio** — per questo il default è una Student-t
+centrata sulla mediana della risposta. Il centraggio è solo interno:
+l'intercetta e i coefficienti che leggete nel `summary()` finale sono riportati
+sulla scala originale.
+:::
+
+Le prior si impostano con `set_prior()`: lo vedremo tra poco, e il modo giusto
+di *sceglierle* e collaudarle è il tema della @sec-prior-scelta. Ultima
+differenza pratica da ricordare: in `pp_check()` l'argomento per il numero di
+simulazioni si chiama `ndraws`, non `nreps`.
+
+# Applicazioni {#sec-applicazioni}
+
+## Il t-test ripensato: la ROPE {#sec-rope}
+
+Uno psicologo valuta se una nuova tecnica di meditazione riduca lo stress: 60
+soggetti, 30 di controllo e 30 in trattamento. Simuliamo dati con esattamente le
+statistiche dello studio (controllo: media 80.8, ds 10.05; trattamento: media
+75.6, ds 14.76):
+
+```{r}
+#| label: meditazione-dati
+library(MASS)
+set.seed(3)
+controllo   <- as.vector(mvrnorm(30, mu = 80.8, Sigma = 10.05^2, empirical = TRUE))
+trattamento <- as.vector(mvrnorm(30, mu = 75.6, Sigma = 14.76^2, empirical = TRUE))
+
+meditazione <- data.frame(gruppo = rep(c("controllo", "trattamento"), each = 30),
+                          stress = c(controllo, trattamento))
+```
+
+Il test $t$ classico:
+
+```{r}
+#| label: meditazione-ttest
+t.test(stress ~ gruppo, data = meditazione,
+       alternative = "greater", var.equal = TRUE)
+```
+
+$p \approx 0.06$: non significativo. Fine dell'analisi? In ottica bayesiana
+possiamo fare un ragionamento più fine. Supponiamo che il trattamento, *per essere
+utile in pratica*, debba produrre una riduzione di **almeno 5 punti**: differenze
+tra $-5$ e 0 sono "sostanzialmente nulle". L'intervallo $[-5, 0]$ è la nostra
+**ROPE** (*Region Of Practical Equivalence*; Kruschke, 2015).
+
+Stimiamo il modello con una prior debolmente informativa e scettica sulla
+differenza ($\delta \sim \mathcal{N}(0, 5)$: a priori, riduzioni e aumenti
+ugualmente plausibili, per lo più entro ±10 punti):
+
+```{r}
+#| label: meditazione-fit
+#| results: hide
+fit_med <- stan_glm(stress ~ gruppo, data = meditazione,
+                    prior = normal(location = 0, scale = 5),
+                    seed = 1)
+```
+
+```{r}
+#| label: meditazione-rope
+POST <- as.data.frame(fit_med)
+delta <- POST$gruppotrattamento          # differenza trattamento - controllo
+
+plot(density(delta), lwd = 2, main = "",
+     xlab = expression(delta), ylab = expression(p(delta~"|"~D)))
+abline(v = c(-5, 0), lty = 3)
+
+c(riduzione_utile = mean(delta < -5),          # sotto la ROPE
+  equivalenza     = mean(delta >= -5 & delta <= 0),
+  peggioramento   = mean(delta > 0))
+```
+
+Invece di "non significativo", la conclusione diventa: con probabilità circa 0.3
+il trattamento produce una riduzione praticamente rilevante, con probabilità circa
+0.6 una differenza trascurabile, e un peggioramento è poco credibile. Il quadro è
+onesto: i dati non bastano a decidere, e servono più osservazioni — che è
+un'informazione ben diversa da "rigettiamo/non rigettiamo".
+
+::: {.callout-note}
+A differenza di NHST, il metodo bayesiano permette anche di **accettare**
+un'ipotesi di equivalenza: se la posterior finisse quasi tutta *dentro* la ROPE,
+concluderemmo che la differenza è praticamente nulla — cosa che un p-value alto
+non autorizza mai a dire.
+:::
+
+## Più di due gruppi: l'ANOVA bayesiana {#sec-anova}
+
+Un esperimento sul ragionamento nei bambini (scala 0–15) con tre condizioni:
+controllo, rinforzo negativo, rinforzo positivo ($n = 20$ per gruppo).
+
+Cosa ci aspettiamo?
 
 $$
-R^2 = \frac{\text{SS}_R}{\text{SS}_T} = 1 - \frac{\text{SS}_E}{\text{SS}_T}
+\mu_0 \sim \mathcal{N}(6, 3) \qquad
+\mu_{neg} - \mu_0 \sim \mathcal{N}(2, 3) \qquad
+\mu_{pos} - \mu_0 \sim \mathcal{N}(5, 3)
 $$
 
-- la proporzione di variabilità spiegata **dal modello nel suo complesso** è il
-  **coefficiente di determinazione** $R^2$;
-- la proporzione di variabilità spiegata **da ciascun effetto** si stima con
-  $\eta^2$ (rapporto tra la devianza dell'effetto e quella totale), calcolabile
-  dalla tabella ANOVA:
-
 ```{r}
-#| label: eta2
-a <- anova(m4)
-eta2 <- a$"Sum Sq" / sum(a$"Sum Sq")
-data.frame(effetto = rownames(a), eta2 = round(eta2, 3))
+#| label: rinforzo-dati
+set.seed(8)
+controllo <- as.vector(mvrnorm(20, mu = 5.9, Sigma = 1.7^2, empirical = TRUE))
+negativo  <- as.vector(mvrnorm(20, mu = 7.0, Sigma = 1.8^2, empirical = TRUE))
+positivo  <- as.vector(mvrnorm(20, mu = 9.3, Sigma = 1.8^2, empirical = TRUE))
+
+rinforzo <- data.frame(
+  condizione = factor(rep(c("controllo", "negativo", "positivo"), each = 20)),
+  punteggio  = c(controllo, negativo, positivo))
+
+plot(punteggio ~ condizione, data = rinforzo,
+     xlab = "Condizione", ylab = "Punteggio di ragionamento")
 ```
 
-### Due casi particolari
-
-**Caso 1: dipendenza funzionale perfetta.** Tutti i punti giacciono esattamente
-sulla retta di regressione: tutte le differenze $y_i - \hat{y}_i$ sono nulle,
-quindi la devianza residua è zero e la devianza totale coincide con quella di
-regressione. $R^2 = 1$.
-
-**Caso 2: indipendenza.** La retta di regressione coincide con la media di $Y$
-(pendenza nulla): sono nulle tutte le differenze $\hat{y}_i - \bar{y}$, la devianza
-di regressione è zero e la devianza totale coincide con quella residua.
-$R^2 \approx 0$.
+Stimiamo il modello nullo e il modello con la condizione sperimentale (le prior
+sui due coefficienti vanno passate come vettori, nell'ordine dei livelli):
 
 ```{r}
-#| label: casi-particolari
-#| fig-height: 3.8
-#| fig-width: 8
-set.seed(1)
-x  <- runif(30, 5, 20)
-y_perf <- 2 + x                          # caso 1: nessun errore
-y_indip <- rnorm(30, 10, 5)              # caso 2: Y non dipende da X
+#| label: rinforzo-fit
+#| results: hide
+fit_rinf0 <- stan_glm(punteggio ~ 1, data = rinforzo, seed = 1)
 
-par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
-plot(x, y_perf, pch = 19, main = expression(R^2 == 1), xlab = "X", ylab = "Y")
-abline(lm(y_perf ~ x), col = "red", lwd = 2)
-plot(x, y_indip, pch = 19, main = expression(R^2 %~~% 0), xlab = "X", ylab = "Y")
-abline(lm(y_indip ~ x), col = "red", lwd = 2)
-abline(h = mean(y_indip), lty = 2)
-par(mfrow = c(1, 1))
+fit_rinf1 <- stan_glm(punteggio ~ condizione, data = rinforzo,
+                      prior_intercept = normal(6, 3),
+                      # prior sullo 0
+                      prior = normal(location = c(0, 0), 
+                                     scale = c(3, 3)),
+                      seed = 1)
 ```
 
-::: {.callout-note icon=false title="✏️ Esercizio 9 — Da che cosa dipende R²?"}
-Simulate due dataset con la **stessa** relazione $y = 2 + 0.5x + \epsilon$
-($n = 200$, $x \sim \mathcal{N}(0,1)$), ma errori con deviazione standard diversa:
-$\sigma = 0.5$ nel primo e $\sigma = 3$ nel secondo.
+```{r}
+#| label: rinforzo-coef
+round(posterior_interval(fit_rinf1, prob = 0.95), 2)
+```
 
-a. Stimate i due modelli: le stime di $\beta_1$ sono simili?
-b. Confrontate gli $R^2$. Che cosa concludete sul rapporto tra "forza
-   dell'effetto" e $R^2$?
+Il **posterior predictive check** — l'equivalente bayesiano del
+`check_predictions()` che conosciamo — confronta i dati osservati con dataset
+simulati dal modello (qui usando, per ogni simulazione, un diverso draw dei
+parametri, incertezza inclusa):
+
+```{r}
+#| label: rinforzo-ppcheck
+pp_check(fit_rinf1, nreps = 30)
+```
+
+E la variabilità spiegata ha la sua versione bayesiana: non un numero, ma una
+distribuzione.
+
+```{r}
+#| label: rinforzo-r2
+quantile(bayes_R2(fit_rinf1), probs = c(0.05, 0.5, 0.95))
+```
+
+**Confronto tra modelli.** Nella dispensa sui modelli lineari abbiamo usato AIC e
+pesi di Akaike; l'analogo bayesiano moderno è la **LOO cross-validation**
+(*leave-one-out*, pacchetto loo), che stima la capacità predittiva del modello su
+dati nuovi (elpd, *expected log predictive density*):
+
+```{r}
+#| label: rinforzo-loo
+library(loo)
+loo0 <- loo(fit_rinf0)
+loo1 <- loo(fit_rinf1)
+loo_compare(loo0, loo1)
+```
+
+Il modello con la condizione sperimentale ha un elpd più alto, con una differenza
+pari a quasi tre volte il suo errore standard: la condizione migliora nettamente la
+capacità predittiva. Come per l'AIC, il confronto penalizza automaticamente la
+complessità inutile.
+
+
+## Di nuovo `kidiq` {#sec-kidiq}
+
+Il modello è: `kid_score ~ mom_iq * mom_hs`, stimato là con `lm()`, diventa:
+
+```{r}
+#| label: kidiq-fit
+#| results: hide
+kidiq <- read.csv("dati/kidiq.csv")
+kidiq$mom_hs <- factor(kidiq$mom_hs)
+
+fit_kidiq <- stan_glm(kid_score ~ mom_iq * mom_hs, data = kidiq, seed = 1)
+```
+
+```{r}
+#| label: kidiq-confronto
+m4 <- lm(kid_score ~ mom_iq * mom_hs, data = kidiq)
+round(cbind(lm = coef(m4), stan_glm = coef(fit_kidiq)), 2)
+```
+
+Con $n = 434$ e prior deboli (i default di rstanarm sono prior debolmente
+informative, riscalate sui dati: guardate `prior_summary(fit_kidiq)`), le stime
+sono molto vicine a quelle di `lm()` — come deve essere. Le piccole differenze sui
+coefficienti più grandi (intercetta e `mom_hs1`) sono il leggero shrinkage
+esercitato dalla prior. Quello che cambia davvero è ciò che possiamo *dire*:
+
+```{r}
+#| label: kidiq-posterior
+POST <- as.data.frame(fit_kidiq)
+mean(POST$`mom_iq:mom_hs1` < 0)      # Pr(interazione < 0 | D)
+```
+
+La probabilità che l'interazione sia negativa (cioè che l'effetto del QI della
+madre sia più debole tra le diplomate) è 0.999, praticamente certa: un'affermazione
+diretta, senza passare per "rigettiamo l'ipotesi che l'interazione sia zero".
+
+::: {.callout-note icon=false title="✏️ Esercizio 9 — La vostra prima regressione bayesiana"}
+Stimate con `stan_glm()` il modello additivo `kid_score ~ mom_iq + mom_hs`.
+
+a. Controllate le diagnostiche (Rhat, n_eff, trace plot): il campionamento ha
+   funzionato?
+b. Confrontate le stime con quelle di `lm()`.
+c. Calcolate l'intervallo di credibilità al 95% per il coefficiente di `mom_hs1` e
+   $Pr(\beta_{hs} > 5\,|\,D)$: a parità di QI, quanto è credibile che il diploma
+   della madre "valga" più di 5 punti?
+d. Eseguite il posterior predictive check con `pp_check()`.
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 9"}
 ```{r}
 #| label: sol-es9
-set.seed(123)
-n <- 200
-x <- rnorm(n)
-y_preciso <- 2 + 0.5 * x + rnorm(n, 0, 0.5)
-y_rumoroso <- 2 + 0.5 * x + rnorm(n, 0, 3)
-
-mp <- lm(y_preciso ~ x)
-mr <- lm(y_rumoroso ~ x)
-rbind(preciso  = c(coef(mp), R2 = summary(mp)$r.squared),
-      rumoroso = c(coef(mr), R2 = summary(mr)$r.squared))
+#| results: hide
+fit_add <- stan_glm(kid_score ~ mom_iq + mom_hs, data = kidiq, seed = 1)
 ```
 
-Le stime di $\beta_1$ sono vicine al vero valore 0.5 in entrambi i casi, ma $R^2$
-crolla da circa 0.46 a circa 0.02. **Lo stesso effetto** può produrre $R^2$
-altissimi o bassissimi a seconda della variabilità residua: $R^2$ misura quanto il
-modello "copre" la variabilità di $Y$, non quanto è grande o importante un
-coefficiente.
+```{r}
+#| label: sol-es9-output
+summary(fit_add, digits = 2)
+round(cbind(lm = coef(lm(kid_score ~ mom_iq + mom_hs, data = kidiq)),
+            stan_glm = coef(fit_add)), 2)
+
+posterior_interval(fit_add, prob = 0.95, pars = "mom_hs1")
+POST <- as.data.frame(fit_add)
+mean(POST$mom_hs1 > 5)
+
+pp_check(fit_add, nreps = 30)
+```
+
+a. Rhat = 1 e n_eff nell'ordine delle migliaia: tutto bene.
+b. Le stime sono praticamente identiche a `lm()` ($n$ grande, prior deboli).
+c. L'intervallo al 95% va da circa 1.6 a circa 10.2; $Pr(\beta_{hs} > 5) \approx 0.67$:
+   più probabile che no, ma tutt'altro che certo — l'intervallo è largo.
+d. Le curve simulate seguono bene la distribuzione osservata, come per il modello
+   frequentista della dispensa sui modelli lineari.
 :::
-
-# Confronto e selezione di modelli
-
-> *All models are wrong, but some are useful.* — George E. P. Box
-
-Lo scopo di un modello statistico è essenzialmente questo: a partire da un insieme
-di dati osservati, identificare il processo latente sottostante che li ha generati.
-L'obiettivo del ricercatore è individuare il modello migliore.
-
-## I problemi
-
-Sembra semplice, ma:
-
-- possono esistere **molti modelli** che spiegano gli stessi dati;
-- le **variazioni casuali** rendono difficile identificare il modello;
-- il **modello vero potrebbe non essere** tra quelli effettivamente messi alla
-  prova.
-
-Un obiettivo realistico, quindi, è identificare il modello che rappresenta la
-**migliore approssimazione** al modello vero.
-
-## L'overfitting
-
-C'è una tensione fondamentale tra due proprietà di un modello:
-
-- la **bontà di adattamento** (*goodness of fit*): quanto bene il modello
-  riproduce i dati *osservati* — e questa **cresce sempre** all'aumentare della
-  complessità del modello;
-- la **generalizzabilità**: quanto bene il modello prevede dati *nuovi* — e questa
-  cresce fino a un certo punto, poi peggiora (curva a U rovesciata; Pitt, Myung &
-  Zhang, 2002).
-
-Un modello troppo complesso finisce per adattarsi anche al **rumore** dei dati: è
-il fenomeno dell'**overfitting**.
-
-> *...fitting is easy; prediction is hard.* — Richard McElreath
-
-Vediamolo con un esempio classico (McElreath): volume cranico e massa corporea di
-sette specie di ominidi. Con 7 punti, un polinomio di grado 6 passa *esattamente*
-per tutti i punti:
-
-```{r}
-#| label: overfit-r2
-ominidi <- data.frame(
-  specie   = c("afarensis", "africanus", "habilis", "boisei",
-               "rudolfensis", "ergaster", "sapiens"),
-  massa    = c(37.0, 35.5, 34.5, 41.5, 55.5, 61.0, 53.5),
-  cervello = c(438, 452, 612, 521, 752, 871, 1350))
-
-r2 <- sapply(1:6, function(g)
-  summary(lm(cervello ~ poly(massa, g), data = ominidi))$r.squared)
-round(r2, 2)
-```
-
-L'$R^2$ sale monotonicamente con il grado del polinomio, fino a 1. Ma guardate
-*come* lo fa:
-
-```{r}
-#| label: overfit-plot
-#| fig-height: 3.8
-#| fig-width: 8
-griglia <- data.frame(massa = seq(34.5, 61, length.out = 200))
-par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
-for (g in c(1, 6)) {
-  m <- lm(cervello ~ poly(massa, g), data = ominidi)
-  plot(cervello ~ massa, data = ominidi, pch = 19,
-       ylim = c(-500, 1600),
-       xlab = "Massa corporea (kg)", ylab = "Volume cranico (cc)",
-       main = paste0("Grado ", g, " — R² = ", round(summary(m)$r.squared, 2)))
-  lines(griglia$massa, predict(m, newdata = griglia), col = "red", lwd = 2)
-  abline(h = 0, lty = 3)
-}
-par(mfrow = c(1, 1))
-```
-
-Il polinomio di grado 6 ha $R^2 = 1$ ma, tra un punto e l'altro, arriva a prevedere
-un volume cranico **negativo**: si è adattato perfettamente ai dati e ha perso ogni
-capacità di generalizzare. Massimizzare il fit non è il criterio giusto per
-scegliere un modello: servono criteri che tengano conto anche della complessità.
-
-## Il confronto mediante ANOVA
-
-Costruiamo una serie di modelli per i dati `kidiq`, dal modello **nullo** (solo
-intercetta) al modello con interazione:
-
-```{r}
-#| label: anova-confronto
-m0 <- lm(kid_score ~ 1,               data = kidiq)
-m1 <- lm(kid_score ~ mom_iq,          data = kidiq)
-m2 <- lm(kid_score ~ mom_hs,          data = kidiq)
-m3 <- lm(kid_score ~ mom_iq + mom_hs, data = kidiq)
-m4 <- lm(kid_score ~ mom_iq * mom_hs, data = kidiq)
-
-anova(m0, m1, m2, m3, m4)
-```
-
-`anova()` confronta ogni modello con il precedente tramite test $F$: l'aggiunta di
-parametri riduce significativamente la devianza residua?
-
-::: {.callout-warning}
-Questo approccio funziona solo per modelli **annidati** (ogni modello deve essere
-un caso particolare del successivo). Guardate la terza riga: confrontando `m2` con
-`m1` otteniamo `Df = 0` e una somma dei quadrati *negativa* — un confronto privo di
-senso, perché `m1` e `m2` non sono annidati (nessuno dei due contiene l'altro). R
-esegue il calcolo lo stesso: sta a noi accorgerci del problema.
-:::
-
-## AIC e BIC
-
-Due indici molto usati per il confronto fra modelli sono **AIC** (*Akaike
-Information Criterion*; Akaike, 1974) e **BIC** (*Bayesian Information Criterion*;
-Schwarz, 1978):
-
-$$
-\text{AIC} = -2\log\mathcal{L} + 2k
-\qquad
-\text{BIC} = -2\log\mathcal{L} + k\log n
-$$
-
-dove $\mathcal{L}$ è la verosimiglianza del modello, $k$ il numero di parametri e
-$n$ il numero di osservazioni. Entrambi premiano il fit (primo termine) e
-**penalizzano la complessità** (secondo termine): misurano l'efficienza del modello
-in termini di *previsione* dei dati, proprio quello che l'overfitting comprometteva.
-
-Dati $k$ valori di AIC/BIC per $k$ modelli diversi, **si preferisce il modello con
-il valore più basso**. Due vantaggi pratici rispetto all'ANOVA: i modelli non
-devono essere annidati, e non c'è nessun p-value di mezzo.
-
-```{r}
-#| label: aic-bic
-A <- AIC(m0, m1, m2, m3, m4)
-A[order(A$AIC), ]
-
-B <- BIC(m0, m1, m2, m3, m4)
-B[order(B$BIC), ]
-```
-
-Sia per AIC sia per BIC il modello preferito è `m4`, quello con l'interazione.
-
-## La quantificazione dell'evidenza
-
-Un grande vantaggio di AIC/BIC è la possibilità di stimare la **plausibilità
-relativa** di un modello rispetto a un altro, evitando tutti i problemi associati
-al p-value. Il calcolo dell'**evidenza relativa** (*evidence ratio*) è molto
-semplice:
-
-1. sia $\Delta$ la differenza tra i valori di AIC (o BIC) dei due modelli;
-2. si calcola $\ell = e^{\Delta/2}$.
-
-Confrontiamo ad esempio il modello con interazione (`m4`) con quello senza (`m3`):
-
-```{r}
-#| label: evidence-ratio
-(DAIC <- AIC(m3) - AIC(m4))
-exp(DAIC / 2)
-
-(DBIC <- BIC(m3) - BIC(m4))
-exp(DBIC / 2)
-```
-
-- **Conclusione con AIC**: il modello con interazione è circa **32 volte più
-  plausibile** di quello senza interazione.
-- **Conclusione con BIC**: il modello con interazione è circa **4 volte più
-  plausibile** di quello senza.
-
-(Il BIC penalizza la complessità più severamente dell'AIC, da cui la differenza.)
-
-## Verosimiglianza relativa e pesi di Akaike
-
-Possiamo estendere il ragionamento a tutti i modelli insieme, calcolando per
-ciascuno la verosimiglianza relativa rispetto al modello peggiore (qui il nullo):
-
-```{r}
-#| label: relative-likelihood
-A <- AIC(m0, m1, m2, m3, m4)
-A$delta <- max(A$AIC) - A$AIC
-A$rl    <- exp(A$delta / 2)
-A[order(A$AIC), ]
-```
-
-Il modello `m4` (`kid_score ~ mom_iq * mom_hs`) risulta circa $2.19 \times 10^{23}$
-volte più verosimile del modello nullo.
-
-Infine, possiamo **normalizzare** le verosimiglianze relative per ottenere i
-**pesi di Akaike**, interpretabili come la probabilità di ciascun modello $M_i$,
-dati i dati e l'insieme dei modelli considerati $\mathcal{M}$:
-
-$$
-w_i = \text{Prob}(M_i \,|\, \text{dati}, \mathcal{M}) =
-\frac{\ell_i}{\sum_{j=1}^{J} \ell_j}
-$$
-
-dove $J$ è il numero di modelli considerati (nel nostro caso $J = 5$).
-
-```{r}
-#| label: akaike-weights
-A$w <- A$rl / sum(A$rl)
-barplot(A$w, names.arg = rownames(A), xlab = "modelli", ylab = "peso di Akaike")
-```
-
-Praticamente tutto il peso va a `m4`: dato questo insieme di modelli, è di gran
-lunga il candidato migliore.
-
-## Il pacchetto MuMIn
-
-Il pacchetto **MuMIn** automatizza l'intera procedura e produce una tabella di
-selezione completa (stime, gradi di libertà, log-verosimiglianza, AIC, delta e
-pesi):
-
-```{r}
-#| label: mumin
-library(MuMIn)
-(AICtable <- model.sel(m0, m1, m2, m3, m4, rank = AIC))
-```
-
-E per i confronti a coppie possiamo costruire la matrice delle evidenze relative
-(in scala logaritmica, per leggibilità):
-
-```{r}
-#| label: pairwise
-ER <- outer(A$rl, A$rl, "/")
-rownames(ER) <- colnames(ER) <- rownames(A)
-round(log(ER), 1)
-```
-
-Ogni cella riporta il logaritmo dell'evidenza del modello di riga rispetto al
-modello di colonna: valori positivi favoriscono il modello di riga (es. `m4` vs
-`m3`: $\log \ell = 3.5$, cioè $\ell \approx 32$, come calcolato prima).
-
-## I vantaggi dei criteri di informazione
-
-Riassumendo, rispetto al confronto basato su test e p-value:
-
-- si possono confrontare **tutti i modelli** che condividono lo stesso modello
-  nullo, anche non annidati;
-- i valori di AIC/BIC calcolati sono **indipendenti dall'ordine e dal numero** dei
-  modelli considerati;
-- evidenze relative e pesi di Akaike danno al lettore un quadro molto più ricco dei
-  meriti relativi dei modelli in competizione, quantificando la fiducia statistica
-  nel modello con l'AIC più basso (Burnham & Anderson, 2002; Wagenmakers & Farrell,
-  2004).
-
-Esempio di frase per un articolo: "il modello `m4` risulta circa $2.19 \times
-10^{23}$ volte più verosimile del modello nullo, con peso di Akaike $w = 0.97$
-nell'insieme dei cinque modelli considerati".
 
 ::: {.callout-note icon=false title="✏️ Esercizio 10 — Un'analisi completa"}
-Mettiamo insieme tutto quello che abbiamo visto. Partendo dal modello `m4`
-(`kid_score ~ mom_iq * mom_hs`), chiedetevi se vale la pena aggiungere le altre
-variabili disponibili:
+Tornate all'esperimento sul rinforzo (@sec-anova) e completate l'analisi:
 
-a. stimate i modelli che aggiungono a `m4`: l'età della madre (`mom_age`); la
-   condizione lavorativa (`mom_work`); entrambe;
-b. costruite la tabella di confronto con AIC, delta e pesi di Akaike (a mano o con
-   `model.sel()`);
-c. quale modello scegliete? Con quanta fiducia?
-d. controllate la diagnostica e il predictive check del modello scelto;
-e. scrivete due righe di conclusione "da articolo".
+a. dalla posterior di `fit_rinf1`, calcolate la distribuzione della differenza
+   **positivo − negativo** (differenza tra i due coefficienti) e il suo intervallo
+   di credibilità al 90%;
+b. calcolate $Pr(\mu_{pos} > \mu_{neg}\,|\,D)$;
+c. definite una ROPE per questa differenza, ad esempio $[-1, 1]$ punti
+   ("praticamente equivalenti"), e calcolate la probabilità che la differenza le
+   sia esterna (a destra);
+d. scrivete due righe di conclusione "da articolo" che riportino stime, intervalli
+   e probabilità (niente p-value!).
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 10"}
 ```{r}
 #| label: sol-es10
-mA <- lm(kid_score ~ mom_iq * mom_hs,                      data = kidiq)
-mB <- lm(kid_score ~ mom_iq * mom_hs + mom_age,            data = kidiq)
-mC <- lm(kid_score ~ mom_iq * mom_hs + mom_work,           data = kidiq)
-mD <- lm(kid_score ~ mom_iq * mom_hs + mom_age + mom_work, data = kidiq)
+POST <- as.data.frame(fit_rinf1)
+delta_pos_neg <- POST$condizionepositivo - POST$condizionenegativo
 
-tab <- AIC(mA, mB, mC, mD)
-tab$delta <- tab$AIC - min(tab$AIC)
-tab$w     <- exp(-tab$delta / 2) / sum(exp(-tab$delta / 2))
-tab[order(tab$AIC), ]
+plot(density(delta_pos_neg), lwd = 2, main = "",
+     xlab = "Differenza positivo - negativo", ylab = "densita di probabilita")
+abline(v = c(-1, 1), lty = 3)
+
+quantile(delta_pos_neg, probs = c(0.05, 0.5, 0.95))
+mean(delta_pos_neg > 0)
+mean(delta_pos_neg > 1)
 ```
 
-Il modello più semplice `mA` resta il preferito ($w \approx 0.49$), seguito da `mB`
-($\Delta \approx 0.8$): un delta sotto 2 indica che i due modelli sono
-sostanzialmente equivalenti, e in questi casi conviene la **parsimonia**. Né l'età
-né la condizione lavorativa della madre migliorano la capacità predittiva
-abbastanza da giustificare i parametri aggiuntivi.
+a. L'intervallo al 90% va da circa 1.4 a circa 3.2 punti.
+b. Praticamente 1: che il rinforzo positivo superi quello negativo è pressoché
+   certo, dati questi dati (e queste prior).
+c. $Pr(\delta > 1\,|\,D) \approx 0.99$: la differenza non solo è positiva, ma è
+   credibilmente *rilevante* secondo la soglia che ci siamo dati.
+d. Ad esempio: "il rinforzo positivo produce punteggi di ragionamento superiori al
+   rinforzo negativo di 2.3 punti (mediana a posteriori; intervallo di credibilità
+   al 90% [1.4; 3.2]); la probabilità che la differenza superi la soglia di
+   rilevanza pratica di 1 punto è 0.99. Il modello con la condizione sperimentale
+   mostra inoltre una capacità predittiva nettamente superiore al modello nullo
+   (confronto LOO)."
+:::
+
+# Quantificare l'evidenza: il Bayes Factor {#sec-bf}
+
+Finora abbiamo usato la posterior per fare affermazioni sui **parametri**
+($Pr(\delta > 0\,|\,D)$, intervalli, ROPE) e la LOO per confrontare la capacità
+**predittiva** dei modelli. C'è una terza domanda possibile: *di quanto i dati
+spostano l'evidenza tra due ipotesi?*
+
+Il **Bayes Factor** (BF) è un **rapporto di verosimiglianza** (*likelihood
+ratio*): misura il supporto relativo che l'**evidenza** fornisce a due ipotesi in
+competizione, $H_0$ e $H_1$.
+
+Il rapporto tra la probabilità a posteriori di $H_0$ vs. $H_1$, si ottiene
+moltiplicando **prior odds** delle ipotesi ed il **Bayes Factor**:
+
+$$
+\frac{p(H_0|D)}{p(H_1|D)} = \frac{p(D|H_0)}{p(D|H_1)} \times \frac{p(H_0)}{p(H_1)}
+$$
+
+La formula si può quindi parafrasare così:
+
+$$
+\text{posterior odds} = \text{Bayes Factor} \times \text{prior odds}
+$$
+
+La probabilità a posteriori di ciascuna ipotesi, dati i dati, è quindi:
+
+$$
+p(H_0|D) = \frac{p(D|H_0) \times p(H_0)}{p(D|H_1) \times p(H_1) + p(D|H_0) \times p(H_0)}
+$$
+
+![La logica del Bayes Factor (da Keysers, Gazzola & Wagenmakers, 2020). In alto:
+le distribuzioni dei valori di $t$ *previste* da $H_0$ (rosso) e da $H_1$ (blu).
+Al centro: il BF è il rapporto tra le **altezze** delle due curve nel punto
+realmente osservato $t_1$ — notate la differenza con il p-value, che è l'*area*
+oltre $t_1$ sotto la sola $H_0$ (in giallo nel primo pannello). In basso: la
+scala dell'evidenza.](img/figBF.png)
+
+Che cosa sono $p(D\,|\,H_0)$ e $p(D\,|\,H_1)$? Se l'ipotesi fissa il parametro a
+un valore preciso (es. $H_0: \theta = 0.5$), è la solita verosimiglianza. Se
+invece l'ipotesi lascia il parametro libero con una prior (es.
+$H_1: \theta \sim \text{Beta}(1, 1)$), è la **verosimiglianza marginale**: la
+media della likelihood pesata con la prior,
+
+$$
+p(D\,|\,H) = \int p(D\,|\,\theta, H)\, p(\theta\,|\,H)\, d\theta
+$$
+
+cioè proprio quel denominatore $p(D)$ del teorema di Bayes che finora abbiamo
+trattato da costante di normalizzazione e ignorato. Detto in parole:
+$p(D\,|\,H)$ è la probabilità che l'ipotesi — prior inclusa — assegnava ai dati
+**prima di vederli**.
+
+Per interpretare i valori del BF si usa comunemente la scala di Jeffreys (1961;
+si veda anche Kass & Raftery, 1995), la stessa del pannello inferiore della
+figura:
+
+| $BF_{10}$ | Evidenza a favore di $H_1$ |
+|-----------|----------------------------|
+| 1 – 3     | debole ("aneddotica")      |
+| 3 – 10    | moderata                   |
+| 10 – 30   | forte                      |
+| 30 – 100  | molto forte                |
+| > 100     | estrema                    |
+
+(I valori sotto 1 si leggono al contrario, come evidenza a favore di $H_0$:
+$BF_{10} = 0.1$ equivale a $BF_{01} = 10$. Un BF vicino a 1 è **assenza di
+evidenza**: i dati non distinguono le due ipotesi.)
+
+Calcolare il BF può essere difficile in certe situazioni: l'integrale della
+verosimiglianza marginale raramente ha una forma chiusa. Vediamo i due strumenti
+principali.
+
+## Stimare il BF: il bridge sampling {#sec-bridge}
+
+Nel caso generale — un modello di regressione con i suoi coefficienti e la sua
+$\sigma$ — la verosimiglianza marginale è un integrale su *tutti* i parametri e
+va **stimata** con metodi dedicati. Lo standard attuale è il **bridge sampling**
+(pacchetto bridgesampling; Gronau et al., 2020), che ricicla in modo astuto i
+draws MCMC del modello per stimare $p(D\,|\,H)$.
+
+Con brms servono due accorgimenti: stimare i modelli con
+`save_pars = save_pars(all = TRUE)` (il bridge sampling ha bisogno di tutti i
+draws) e usare **prior proprie** su tutti i parametri — con le prior piatte di
+default sui coefficienti la verosimiglianza marginale non esiste nemmeno.
+Confrontiamo, per la meditazione (@sec-rope), il modello con il gruppo contro il
+modello nullo:
 
 ```{r}
-#| label: sol-es10-diag
-#| fig-height: 7
-par(mfrow = c(2, 2))
-plot(mA)
+#| label: bridge-fit
+#| results: hide
+fit_med_h1 <- brm(stress ~ gruppo, data = meditazione,
+                  prior = set_prior("normal(0, 5)", class = "b"),
+                  save_pars = save_pars(all = TRUE),
+                  iter = 4000, seed = 1,
+                  file = "objects/fit_med_h1", file_refit = "on_change")
+
+fit_med_h0 <- brm(stress ~ 1, data = meditazione,
+                  save_pars = save_pars(all = TRUE),
+                  iter = 4000, seed = 1,
+                  file = "objects/fit_med_h0", file_refit = "on_change")
+```
+
+```{r}
+#| label: bridge-bf
+bayes_factor(fit_med_h1, fit_med_h0, silent = TRUE)
+```
+
+$BF_{10} \approx 1.3$: evidenza "aneddotica", i dati della meditazione non
+spostano quasi nulla — coerente con l'analisi ROPE, che lasciava aperte tutte le
+possibilità (ma ora sappiamo anche *quantificare* quel "non sappiamo"). Per un
+caso particolare ma importantissimo — l'ipotesi **puntuale annidata**, come
+$\delta = 0$ dentro il modello completo — esiste però una scorciatoia che non
+richiede di stimare nessun integrale.
+
+## Il rapporto di Savage-Dickey {#sec-savage-dickey}
+
+Quando $H_0$ è un caso particolare di $H_1$ (un'ipotesi *puntuale* annidata:
+$\theta = 0.5$ dentro "$\theta$ libera", oppure $\delta = 0$ dentro
+"$\delta \sim \mathcal{N}(0, 5)$"), il BF si ottiene confrontando prior e
+posterior **nel punto nullo**:
+
+$$
+BF_{01} = \frac{p(\theta_0\,|\,D, H_1)}{p(\theta_0\,|\,H_1)}
+$$
+
+L'intuizione: se i dati hanno *allontanato* la densità da $\theta_0$ (posterior
+più bassa della prior in quel punto), sono evidenza contro $H_0$; se l'hanno
+*concentrata* su $\theta_0$, sono evidenza a favore.
+
+Vediamolo sui kiwi: $H_0: \theta = 0.5$ (popolazione bilanciata) contro
+$H_1: \theta \sim \text{Beta}(1, 1)$. Prior e posterior sono note —
+$\text{Beta}(1, 1)$ e $\text{Beta}(3, 8)$ — quindi bastano due `dbeta()`:
+
+```{r}
+#| label: bf-savage-dickey
+dbeta(0.5, 3, 8) / dbeta(0.5, 1, 1)     # BF01
+```
+
+$BF_{01} = 0.70$, cioè $BF_{10} \approx 1.4$: con 9 animali i dati non
+distinguono le due ipotesi (evidenza debole, guardate la scala).
+
+E se avessimo osservato una perfetta parità, 45 maschi su 90? La posterior
+sarebbe $\text{Beta}(46, 46)$, *concentrata* proprio sul punto nullo:
+
+```{r}
+#| label: bf-nulla
+dbeta(0.5, 46, 46) / dbeta(0.5, 1, 1)   # BF01
+```
+
+$BF_{01} \approx 7.6$: evidenza moderata **a favore** dell'ipotesi nulla — una
+cosa che il p-value non può dare mai: da un p alto si conclude solo "non rigetto
+$H_0$", che non è evidenza per $H_0$. È la distinzione della figura di Keysers:
+*absence of evidence* (BF vicino a 1) contro *evidence of absence* ($BF_{01}$
+grande).
+
+```{r}
+#| label: sd-visual
+#| fig-height: 3.8
+#| fig-width: 8
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+# caso 1: 2 maschi su 9
+curve(dbeta(x, 3, 8), from = 0, to = 1, lwd = 2, col = "red", ylim = c(0, 8),
+      xlab = expression(theta), ylab = "densita di probabilita",
+      main = "2 maschi su 9: BF01 = 0.70")
+curve(dbeta(x, 1, 1), add = TRUE, lwd = 2, lty = 2)
+points(c(0.5, 0.5), c(dbeta(0.5, 1, 1), dbeta(0.5, 3, 8)), pch = 19)
+legend("topright", bty = "n", lwd = 2, lty = c(2, 1), col = c("black", "red"),
+       legend = c("prior", "posterior"))
+# caso 2: 45 maschi su 90
+curve(dbeta(x, 46, 46), from = 0, to = 1, lwd = 2, col = "red", ylim = c(0, 8),
+      xlab = expression(theta), ylab = "densita di probabilita",
+      main = "45 maschi su 90: BF01 = 7.6")
+curve(dbeta(x, 1, 1), add = TRUE, lwd = 2, lty = 2)
+points(c(0.5, 0.5), c(dbeta(0.5, 1, 1), dbeta(0.5, 46, 46)), pch = 19)
 par(mfrow = c(1, 1))
 ```
 
+Nei due pannelli si "vede" il Savage-Dickey: a sinistra i dati hanno abbassato
+la densità nel punto nullo (evidenza debole contro $H_0$), a destra l'hanno
+alzata di quasi 8 volte (evidenza a favore).
+
+E per la meditazione? L'ipotesi $\delta = 0$ è annidata nel modello con prior
+$\mathcal{N}(0, 5)$: il Savage-Dickey stima lo stesso BF del bridge sampling —
+e brms lo calcola da solo con `hypothesis()`, come vedrete nell'Esercizio 11.
+
+
+::: {.callout-note icon=false title="✏️ Esercizio 11 — Il Savage-Dickey con brms"}
+Anche `brms` sa calcolare il Bayes Factor con il rapporto di Savage-Dickey.
+Tornate ai dati della meditazione (@sec-rope) e testate l'ipotesi puntuale
+$\delta = 0$:
+
+a. stimate il modello con brms, con prior $\mathcal{N}(0, 5)$ sul coefficiente
+   e l'argomento `sample_prior = TRUE` (per il Savage-Dickey servono anche i
+   campioni dalla prior);
+b. calcolate il BF con `hypothesis(fit, "gruppotrattamento = 0")`: per le
+   ipotesi *puntuali*, `Evid.Ratio` è il $BF_{01}$ di Savage-Dickey;
+c. guardate `plot(hypothesis(...))`: che cosa mostra?
+d. interpretate il risultato e confrontatelo con l'analisi ROPE della @sec-rope:
+   le due conclusioni sono coerenti?
+:::
+
+::: {.callout-tip collapse="true" title="Soluzione — Esercizio 11"}
 ```{r}
-#| label: sol-es10-ppc
-check_predictions(mA)
+#| label: sol-es13-fit
+#| results: hide
+fit_med_brm <- brm(stress ~ gruppo, data = meditazione,
+                   prior = set_prior("normal(0, 5)", class = "b",
+                                     coef = "gruppotrattamento"),
+                   sample_prior = TRUE, seed = 1,
+                   file = "objects/fit_med_brm",
+                   file_refit = "on_change")
 ```
 
-Possibile conclusione: "Tra i modelli considerati, quello con QI della madre,
-diploma e loro interazione risulta il migliore (AIC = 3745.1, $w = 0.49$);
-l'aggiunta di età e condizione lavorativa della madre non migliora la capacità
-predittiva ($\Delta\text{AIC} < 4$, a fronte di più parametri). Il modello spiega
-circa il 23% della variabilità dei punteggi, con un errore medio di previsione di
-circa 18 punti."
+```{r}
+#| label: sol-es13-output
+h <- hypothesis(fit_med_brm, "gruppotrattamento = 0")
+h
+plot(h)
+```
+
+b. `Evid.Ratio` è poco sotto 1: i dati sono leggermente *contro* l'ipotesi nulla
+   ($BF_{10} = 1/BF_{01}$ poco sopra 1), ma siamo in piena zona "evidenza
+   debole": i dati non discriminano tra "nessun effetto" e "un effetto".
+c. Il grafico mostra prior e posterior di $\delta$ sovrapposte: il Savage-Dickey
+   è il rapporto tra le loro altezze nel punto $\delta = 0$, ed è visibilmente
+   vicino a 1.
+d. È la stessa conclusione dell'analisi ROPE, vista dall'angolo del test: là
+   dicevamo "i dati non bastano a decidere tra riduzione utile ed equivalenza",
+   qui "i dati non spostano l'evidenza tra $H_0$ e $H_1$". Con $n = 60$ e un
+   effetto piccolo, nessuno strumento può inventarsi l'informazione che non c'è —
+   ma entrambi, a differenza del p-value, lo *dicono* esplicitamente. Notate
+   infine che $BF_{01} \approx 0.74$ equivale a $BF_{10} \approx 1.35$: in
+   accordo (a meno dell'errore di stima) con il bridge sampling della
+   @sec-bridge — due stimatori della stessa quantità.
 :::
+
+# Scegliere le prior {#sec-prior-scelta}
+
+Le prior sono la forza dell'approccio bayesiano — permettono di incorporare
+conoscenza, regolarizzano le stime, rendono possibili modelli complessi — ma vanno
+scelte con consapevolezza: una prior mal calibrata può produrre veri e propri
+errori inferenziali. Tre regole pratiche (adattate dalle
+[raccomandazioni del team di Stan](https://github.com/stan-dev/stan/wiki/prior-choice-recommendations)):
+
+1. **Debolmente informative è meglio di non informative.** Una prior debolmente
+   informativa esclude valori assurdi del parametro senza sbilanciare la stima
+   (es. $\mathcal{N}(0, 5)$ per una differenza che sulla scala della variabile non
+   può ragionevolmente superare ±15). Le prior piatte "per prudenza" in realtà
+   dicono che un coefficiente di 10 e uno di 10 milioni sono ugualmente plausibili:
+   non è prudenza, è un'affermazione estrema.
+2. **Debolmente informative è meglio di troppo informative.** Perdere un po' di
+   precisione con una prior un po' troppo larga costa meno che escludere per
+   errore regioni plausibili con una prior troppo stretta.
+3. **Con** $n$ **piccolo, la prior va dichiarata e messa alla prova.** Lo abbiamo
+   visto nell'Esercizio 7: con 10 osservazioni, prior diverse producono conclusioni
+   diverse. In questi casi si fa una **sensitivity analysis**: si ristima il
+   modello con prior più e meno informative e si verifica quanto cambiano le
+   conclusioni.
+
+Facciamo la sensitivity analysis sull'esempio della meditazione:
+
+```{r}
+#| label: sensitivity
+#| results: hide
+prior_sd <- c(1, 5, 50)      # prior molto stretta, media, molto vaga
+stime <- data.frame(prior_sd = prior_sd, mediana = NA, q5 = NA, q95 = NA)
+
+for (k in 1:3) {
+  fit_k <- stan_glm(stress ~ gruppo, data = meditazione,
+                    prior = normal(0, prior_sd[k]), seed = 1)
+  draws <- as.data.frame(fit_k)$gruppotrattamento
+  stime$mediana[k] <- median(draws)
+  stime$q5[k]  <- quantile(draws, 0.05)
+  stime$q95[k] <- quantile(draws, 0.95)
+}
+```
+
+```{r}
+#| label: sensitivity-tabella
+round(stime, 2)
+```
+
+Man mano che la prior si allarga, la stima si avvicina alla differenza osservata
+nei dati (circa −5.2): con scala 50 la prior non tocca praticamente nulla, con
+scala 5 lo shrinkage è moderato, con la prior strettissima $\mathcal{N}(0, 1)$ la
+differenza viene schiacciata quasi a zero (la prior non "crede" a differenze
+grandi, e $n = 60$ non basta a farle cambiare idea). La conclusione *qualitativa* —
+la differenza è plausibilmente negativa ma la sua rilevanza pratica resta incerta —
+regge per le scale da 5 in su, ed è questo che va riportato; con campioni piccoli
+o effetti deboli, però, l'entità della stima dipende dalla prior, e il lettore ha
+il diritto di saperlo.
+
+## Il prior predictive check {#sec-prior-predictive}
+
+Le regole aiutano, ma come si fa a *vedere* se le prior scelte sono sensate?
+L'idea è la stessa della distribuzione predittiva (@sec-predittiva), con la
+prior al posto della posterior: **simulare dati dal modello prima di avergli
+mostrato quelli veri**. Se il modello, con le nostre prior, genera dati assurdi,
+le prior vanno riviste. In brms basta l'argomento `sample_prior = "only"`: il
+modello viene "stimato" ignorando completamente i dati.
+
+Serve un esempio con più predittori. Simuliamo uno studio ($n = 70$) in cui la
+depressione dipende da gruppo, età e ansia — e siccome i dati li generiamo noi,
+conosciamo i coefficienti **veri**:
+
+```{r}
+#| label: depressione-dati
+set.seed(1555)
+n <- 70
+ansia  <- rnorm(n)
+eta    <- round(runif(n, 18, 50))
+gruppo <- rep(c("g1", "g2"), length.out = n)
+
+depressione <- 0.3 + 0.01 * eta + 0.5 * ansia +
+               0.3 * ifelse(gruppo == "g1", 0, 1) + rnorm(n)
+dat_dep <- data.frame(depressione, gruppo, eta, ansia)
+range(depressione)
+```
+
+Proviamo delle prior che *sembrano* innocue: $\mathcal{N}(0, 1)$ su tutti i
+coefficienti.
+
+```{r}
+#| label: ppc-prior-1
+#| results: hide
+prior_1 <- set_prior("normal(0, 1)", class = "b")
+
+fit_prior_1 <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
+                   prior = prior_1, sample_prior = "only", seed = 1,
+                   file = "objects/fit_prior_1", file_refit = "on_change")
+```
+
+```{r}
+#| label: ppc-prior-1-check
+pp_check(fit_prior_1, ndraws = 100)
+```
+
+I dati veri (curva scura) stanno tra circa −2 e 5; il modello, prima di vederli,
+prevedeva tranquillamente valori di decine di punti. Il colpevole principale è
+`eta`: una pendenza "fino a ±2" (questo dice una $\mathcal{N}(0, 1)$) applicata a
+una variabile che va da 18 a 50 sposta le previsioni anche di ±50 punti su una
+scala che ne copre 7. **Le prior vanno pensate sulla scala di ciascun
+predittore.** Riproviamo:
+
+```{r}
+#| label: ppc-prior-2
+#| results: hide
+prior_2 <- c(
+  set_prior("normal(0, 0.5)", class = "b", coef = "gruppog2"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "eta"),
+  set_prior("normal(0, 0.5)", class = "b", coef = "ansia"),
+  set_prior("normal(0, 2)", class = "sigma"))
+
+fit_prior_2 <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
+                   prior = prior_2, sample_prior = "only", seed = 1,
+                   file = "objects/fit_prior_2", file_refit = "on_change")
+```
+
+```{r}
+#| label: ppc-prior-2-check
+pp_check(fit_prior_2, ndraws = 100)
+```
+
+Ora le previsioni a priori coprono un range plausibile senza essere incollate ai
+dati: prior **debolmente informative** fatte bene. Possiamo stimare il modello
+vero e proprio con queste prior:
+
+```{r}
+#| label: depressione-fit
+#| results: hide
+fit_dep <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
+               prior = prior_2, seed = 1,
+               file = "objects/fit_dep", file_refit = "on_change")
+```
+
+```{r}
+#| label: depressione-fixef
+round(fixef(fit_dep), 2)
+```
+
+## Parameter recovery {#sec-recovery}
+
+Con dati simulati possiamo fare un controllo impossibile con i dati veri:
+verificare che il modello **recuperi i parametri usati per generare i dati**. Se
+non ci riesce con i dati "puliti" di una simulazione, non c'è motivo di fidarsi
+di quello che dirà sui dati veri: è un collaudo standard quando si mette in
+piedi un modello nuovo (e un ottimo modo per scoprire prior troppo strette).
+
+```{r}
+#| label: recovery
+veri <- c(0.3, 0.3, 0.01, 0.5, 1)   # intercetta, gruppo, eta, ansia, sigma
+draws <- data.frame(fit_dep)[, 1:5]
+colnames(draws)
+
+mcmc_recover_intervals(draws, true = veri, prob = 0.80, prob_outer = 0.95)
+```
+
+I triangoli chiari sono i valori veri, i punti scuri le stime con i loro
+intervalli di credibilità (80% e 95%): tutti i valori veri cadono negli
+intervalli al 95%. Il collaudo però ci mostra anche un punto debole:
+l'intercetta è stimata male (e recuperata per un soffio). Non è un bug, è
+geometria: `eta` non è mai vicina a zero, quindi pendenza di `eta` e intercetta
+possono compensarsi quasi liberamente — con $n = 70$ e una pendenza vera
+piccolissima, l'intercetta resta mal identificata. Il parameter recovery serve
+proprio a scoprire *prima* queste fragilità (e suggerisce già un rimedio, la
+centratura dei predittori, di cui parleremo nella lezione sui GLM).
+
+::: {.callout-important}
+**Prior ed errori inferenziali.** Con campioni piccoli e prior molto informative,
+i risultati possono riflettere **quasi solo la prior** — e per il Bayes Factor la
+dipendenza dalla prior è ancora più forte: la prior sotto $H_1$ è parte
+integrante dell'ipotesi testata, e cambiarla cambia il BF anche quando le stime
+dei parametri restano identiche. Non è un problema se la prior è giustificata e
+**dichiarata** (è il senso
+della definizione soggettiva di probabilità: formalizzare in modo trasparente ciò
+che si crede); diventa un errore inferenziale se la prior viene scelta *dopo*
+aver visto i risultati, o taciuta. Prior dichiarate prima dell'analisi,
+prior predictive check e sensitivity check: è così che un'analisi bayesiana si
+tiene onesta.
+:::
+
+#  Esercizio - GLM {#sec-glm}
+
+
+::: {.callout-note icon=false title="✏️ Esercizio 12 — Una regressione logistica"}
+Il dataset [teddy_child.csv](dati/teddy_child.csv) contiene dati su 379 genitori; tra le variabili ci sono `Depression_pp` (depressione post-partum: Yes/No) e `Parental_stress` (stress genitoriale). Vogliamo modellare la **probabilità** di depressione in funzione dello stress.
+
+a. Caricate i dati e convertite la risposta in 0/1:
+   `teddy$dep01 <- ifelse(teddy$Depression_pp == "Yes", 1, 0)`.
+b. Una risposta 0/1 non può essere normale: la famiglia giusta è la Bernoulli, con il *link* logit che collega la probabilità (tra 0 e 1) alla scala lineare dei predittori. Stimate con brms il modello `dep01 ~ Parental_stress` con
+   `family = bernoulli(link = "logit")` (e `file =`, come sempre).
+c. Guardate il `summary()`: diagnostiche a parte, su che scala sono i
+   coefficienti? Il coefficiente dello stress è credibilmente positivo?
+   (`hypothesis()`)
+d. Rendete i risultati interpretabili: `exp()` del coefficiente è l'**odds ratio** per +1 punto di stress; `conditional_effects(fit)` mostra l'effetto
+   direttamente sulla scala della probabilità.
+e. Provate `pp_check(fit, ndraws = 30)`: che aspetto hanno i dati simulati da
+   un modello Bernoulli? Il density overlay è ancora lo strumento giusto?
+:::
+
+::: {.callout-tip collapse="true" title="Soluzione — Esercizio 12"}
+```{r}
+#| label: sol-es12-fit
+#| results: hide
+teddy <- read.csv("dati/teddy_child.csv")
+teddy$dep01 <- ifelse(teddy$Depression_pp == "Yes", 1, 0)
+
+fit_teddy <- brm(dep01 ~ Parental_stress, data = teddy,
+                 family = bernoulli(link = "logit"), seed = 1,
+                 file = "objects/fit_teddy", file_refit = "on_change")
+```
+
+```{r}
+#| label: sol-es12-output
+summary(fit_teddy)
+
+hypothesis(fit_teddy, "Parental_stress > 0")
+
+POST <- as.data.frame(fit_teddy)
+quantile(exp(POST$b_Parental_stress), probs = c(0.025, 0.5, 0.975))
+```
+
+```{r}
+#| label: sol-es12-effects
+conditional_effects(fit_teddy)
+```
+
+```{r}
+#| label: sol-es12-ppcheck
+pp_check(fit_teddy, ndraws = 30)
+```
+
+c. Le stime sono sulla scala dei **log-odds** (il link logit): non si
+   interpretano direttamente. Il coefficiente dello stress è credibilmente
+   positivo: $Pr(\beta > 0\,|\,D)$ è praticamente 1.
+d. L'odds ratio dice di quanto si *moltiplicano* gli odds di depressione per
+   ogni punto di stress in più: qui la mediana è circa 1.04 (+4% di odds per
+   punto, intervallo al 95% da +2% a +6%). `conditional_effects()` traduce
+   tutto nella scala che interessa davvero: la probabilità di depressione
+   cresce sensibilmente lungo il range dello stress osservato.
+e. I dati simulati da una Bernoulli sono fatti solo di 0 e 1: il density
+   overlay mostra due picchi e serve a poco. Per i GLM esistono predictive
+   check dedicati (es. per proporzioni o per classi): li vedremo nella lezione
+   sui GLM. La logica però non cambia — ed è questo il punto: **prior,
+   diagnostiche, posterior, `hypothesis()`, predictive check funzionano
+   identici** qualunque sia la famiglia. Cambia la distribuzione, non la
+   logica bayesiana.
+:::
+
+# Riepilogo finale
+
+Il percorso completo di un'analisi bayesiana:
+
+1. **modello delle osservazioni**: quale distribuzione genera i dati?
+   (binomiale, normale, ...);
+2. **prior**: che cosa è plausibile per i parametri prima dei dati? Con che forza?
+3. **posterior** via teorema di Bayes — analitica nei casi coniugati
+   (Beta-binomiale, normale-normale), via MCMC in tutti gli altri;
+4. **diagnostiche**: Rhat, n_eff, trace plot (il campionamento ha funzionato?),
+   posterior predictive check (il modello descrive i dati?);
+5. **sintesi**: stime puntuali, intervalli di credibilità (quantile o HPD),
+   probabilità delle ipotesi di interesse, eventualmente ROPE;
+6. **previsione**: la distribuzione predittiva per nuovi dati (@sec-predittiva),
+   di cui il predictive check è l'uso diagnostico;
+7. **confronto**: tra modelli in termini predittivi (LOO) o di evidenza relativa
+   (Bayes Factor);
+8. **robustezza**: sensitivity analysis sulle prior — obbligatoria con campioni
+   piccoli e ogni volta che si riporta un Bayes Factor.
+
+E la differenza di fondo da portare a casa: l'approccio frequentista tratta i
+parametri come costanti ignote e condiziona ai valori ipotizzati
+($P(\text{dati}\,|\,H_0)$); l'approccio bayesiano tratta i parametri come variabili
+casuali e condiziona ai dati osservati ($P(\text{ipotesi}\,|\,\text{dati})$) — che
+è, quasi sempre, la domanda a cui volevamo rispondere fin dall'inizio.
 
 # Riferimenti bibliografici
 
 **Testi di riferimento:**
 
-- Fox, J. (1997). *Applied Regression Analysis, Linear Models, and Related Methods*. SAGE.
-- Fox, J. (2002). *An R and S-Plus Companion to Applied Regression*. SAGE.
-- Gelman, A., Hill, J., Vehtari, A. (2020). *Regression and Other Stories*. Cambridge University Press.
+- Gelman, A., Carlin, J. B., Stern, H. S., Dunson, D.B., Vehtari, A., Rubin, D. B. (2014). *Bayesian Data Analysis* (3rd ed.). Chapman & Hall/CRC.
+- Hoff, P. D. (2009). *A First Course in Bayesian Statistical Methods*. Springer.
+- Kruschke, J. (2015). *Doing Bayesian Data Analysis: A Tutorial with R, JAGS, and Stan* (2nd ed.). Academic Press.
+- Lambert, B. (2018). *A Student's Guide to Bayesian Statistics*. SAGE.
+- McElreath, R. (2020). *Statistical Rethinking: A Bayesian Course with Examples in R and Stan* (2nd ed.). CRC Press.
+- Lee, M. D., Wagenmakers, E.-J. (2014). *Bayesian Cognitive Modeling: A Practical Course*. Cambridge University Press.
+
+**Articoli:**
+
+- Cohen, J. (1994). The earth is round (p < .05). *American Psychologist*, 49, 997–1003.
+- Etz, A., Vandekerckhove, J. (2018). Introduction to Bayesian inference for psychology. *Psychonomic Bulletin & Review*, 25, 5–34.
+- Gigerenzer, G., Krauss, S., Vitouch, O. (2004). The null ritual. In D. Kaplan (Ed.), *The Sage Handbook of Quantitative Methodology for the Social Sciences* (pp. 391–408). Sage.
+- Kass, R. E., Raftery, A. E. (1995). Bayes factors. *Journal of the American Statistical Association*, 90, 773–795.
+- Keysers, C., Gazzola, V., Wagenmakers, E.-J. (2020). Using Bayes factor hypothesis testing in neuroscience to establish evidence of absence. *Nature Neuroscience*, 23, 788–799.
+- Kruschke, J. K., Liddell, T. M. (2018). The Bayesian New Statistics: Hypothesis testing, estimation, meta-analysis, and power analysis from a Bayesian perspective. *Psychonomic Bulletin & Review*, 25, 178–206.
+- Rouder, J. N., Speckman, P. L., Sun, D., Morey, R. D., Iverson, G. (2009). Bayesian t tests for accepting and rejecting the null hypothesis. *Psychonomic Bulletin & Review*, 16, 225–237.
+- Wagenmakers, E.-J. (2007). A practical solution to the pervasive problems of p values. *Psychonomic Bulletin & Review*, 14, 779–804.
+- Wasserstein, R. L., Schirm, A. L., Lazar, N. A. (2019). Moving to a world beyond "p < 0.05". *The American Statistician*, 73, 1–19.
 
 **In italiano:**
 
-- Bortot, P., Ventura, L., Salvan, A. (2000). *Inferenza Statistica: Applicazioni con S-PLUS e R*. Cedam, Padova.
-- Grigoletto, M., Ventura, L., Pauli, F. (2017). *Modello lineare. Teoria e applicazioni con R*. Giappichelli, Torino.
-- Pastore, M. (2015). *Analisi dei dati in psicologia (con applicazioni in R)*. Il Mulino, Bologna.
-
-**Sul confronto fra modelli:**
-
-- Burnham, K. P., Anderson, D. R. (2002). *Model Selection and Multimodel Inference*. Springer.
-- Wagenmakers, E.-J., Farrell, S. (2004). AIC model selection using Akaike weights. *Psychonomic Bulletin & Review*, 11, 192–196.
+- Pastore, M., Altoè, G. (2013). Bayes Factor e p-value: così vicini, così lontani. *Giornale Italiano di Psicologia*, 40, 175–193.
 
 **Pacchetti R utilizzati in questa dispensa:**
 
-- **ggplot2** (Wickham, 2016) — grafici;
-- **sjPlot** (Lüdecke, 2023) — visualizzazione degli effetti dei modelli;
-- **effects** (Fox & Weisberg, 2019) — visualizzazione degli effetti dei modelli;
-- **performance** (Lüdecke et al., 2021) — predictive check e diagnostica;
-- **MuMIn** (Bartoń, 2020) — selezione di modelli.
+- **rstanarm** (Goodrich et al., 2024) — regressione bayesiana con Stan, modelli precompilati;
+- **bayesplot** (Gabry & Mahr, 2024) — grafici per modelli bayesiani (trace plot, aree di credibilità);
+- **HDInterval** (Meredith & Kruschke, 2022) — intervalli HPD;
+- **loo** (Vehtari et al., 2024) — confronto di modelli via LOO cross-validation;
+- **BayesFactor** (Morey & Rouder, 2024) — Bayes Factor per i disegni classici (t-test, ANOVA, regressione);
+- **brms** (Bürkner, 2017) — modelli bayesiani con sintassi a formula, codice Stan generato e compilato su misura;
+- **bridgesampling** (Gronau, Singmann & Wagenmakers, 2020) — stima della verosimiglianza marginale dai draws MCMC (usato da `brms::bayes_factor()`);
+- **MASS** (Venables & Ripley, 2002) — simulazione di dati con statistiche fissate.
 
 ---
 
-*Materiale didattico adattato dalle slide del Prof. Massimiliano Pastore.*
+*Materiale didattico adattato dalle slide del Prof. Massimiliano Pastore (con
+contributi di Gianmarco Altoè).*
