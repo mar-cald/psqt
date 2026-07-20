@@ -11,9 +11,6 @@ number-sections: true
 
 Questo documento raccoglie tutto il materiale della lezione. Parte del materiale didattico è stato adattato dalle slide del Prof. [Massimiliano Pastore](https://dpss.psy.unipd.it/~massimiliano.pastore/index.html) (a.a. 2024/2025) e dal corso che abbiamo tenuto alla Scuola Estiva di Metodologia AIP. Eventuali errori sono da attribuire alla sottoscritta (ovviamente).
 
-Questo documento raccoglie tutto il materiale della lezione e va letto
-con **R aperto accanto**. Lungo il percorso troverete degli **esercizi** (riquadri azzurri ✏️): provate a risolverli da soli prima di aprire la soluzione.
-
 Prima di iniziare:
 
 1. installate i pacchetti necessari:
@@ -95,6 +92,12 @@ hist(medie, main = "Distribuzione campionaria della media")
 Ogni campione dà una statistica un po' diversa: questa variabilità da campione a
 campione è esattamente l'incertezza che l'inferenza deve quantificare.
 
+```{r}
+sd(medie)
+```
+
+
+
 
 I due approcci principali per farlo sono quello **frequentista** e quello
 **bayesiano**. Prima di introdurre il secondo, ripassiamo brevemente il primo.
@@ -104,8 +107,7 @@ I due approcci principali per farlo sono quello **frequentista** e quello
 > Vogliamo stimare la proporzione di studenti dei corsi della Scuola di Psicologia
 > a cui piace la statistica.
 
-Usiamo i dati di un questionario rilevato all'inizio di un corso di Analisi dei
-Dati: su $n = 315$ rispondenti, a 75 la statistica piace (punteggio > 6).
+Usiamo i dati di un questionario rilevato all'inizio di un corso di Analisi dei Dati (prof. Pastore): su $n = 315$ rispondenti, a 75 la statistica piace.
 
 ```{r}
 #| label: sondaggio-dati
@@ -120,8 +122,8 @@ di tutti gli studenti?
 
 ## L'approccio NHST {#sec-nhst}
 
-L'approccio classico — che è più corretto chiamare **Null Hypothesis Significance
-Testing** (NHST) piuttosto che "verifica di ipotesi" — procede così:
+L'approccio frequentista **Null Hypothesis Significance
+Testing** (NHST) procede così:
 
 1. si definisce un'**ipotesi nulla**, ad esempio: la proporzione di studenti a cui
    piace la statistica è uguale a quella a cui non piace,
@@ -140,8 +142,10 @@ $\pi = 0.5$:
 
 ```{r}
 #| label: nhst-h0
-S <- 0:315                          # spazio campionario
-P <- dbinom(S, 315, prob = 0.5)     # probabilita di ciascun risultato sotto H0
+S <- 0:315   # spazio campionario
+# probabilita di ciascun risultato sotto H0
+P <- dbinom(S, 315, prob = 0.5)  
+
 plot(S, P, type = "h",
      xlab = "Numero di studenti a cui piace, su 315",
      ylab = expression(f(x~"|"~H[0])))
@@ -169,10 +173,7 @@ In realtà, la domanda che ci interessa davvero è un'altra:
 
 > Dati i valori osservati, qual è la probabilità che la mia ipotesi sia vera?
 
-Non è la stessa cosa. Nel primo caso stiamo calcolando $P(R\,|\,H_0)$, la
-probabilità del risultato condizionata all'ipotesi (una **verosimiglianza**); nel
-secondo $P(H_0\,|\,R)$, la probabilità dell'ipotesi condizionata al risultato (una
-**probabilità a posteriori**). E in generale
+Non è la stessa cosa. Nel primo caso stiamo calcolando $P(R\,|\,H_0)$, la probabilità del risultato condizionata all'ipotesi; nel secondo $P(H_0\,|\,R)$, la probabilità dell'ipotesi condizionata al risultato (una **probabilità a posteriori**). E in generale
 
 $$
 P(R\,|\,H_0) \neq P(H_0\,|\,R)
@@ -188,7 +189,7 @@ $$
 dove $P(H_0)$ è la **probabilità a priori** di $H_0$, cioè quanto era plausibile
 l'ipotesi *prima* di vedere il risultato.
 
-## Un esempio famoso (Cohen, 1994) {#sec-cohen}
+## Esempio schizofrenia {#sec-cohen}
 
 L'incidenza della schizofrenia negli adulti è circa del 2%. Supponiamo di avere un
 test diagnostico che individua il 95% dei soggetti realmente schizofrenici
@@ -203,6 +204,13 @@ $$
 P(H_0) = 0.98 \qquad P(H_1) = 0.02 \qquad
 P(R\,|\,H_0) = 0.03 \qquad P(R\,|\,H_1) = 0.95
 $$
+
+
+> Qual'è la probabilità che il soggetto sia sano, *dato*
+il test positivo?
+
+
+
 
 Notate che $P(R\,|\,H_0) = 0.03 < 0.05$: in logica NHST, davanti a un test
 positivo rigetteremmo l'ipotesi che il soggetto sia sano. Applichiamo invece il
@@ -331,9 +339,6 @@ L'inferenza bayesiana può essere vista come una **riallocazione di credibilità
 tra i possibili valori del parametro: i valori consistenti con i dati guadagnano
 credibilità, quelli inconsistenti la perdono (Kruschke, 2015).
 
-Prima di mettere in pratica questa formula ci servono però due ingredienti: un
-ripasso delle regole della probabilità (per capire *da dove viene* il teorema di
-Bayes) e il concetto di verosimiglianza (per capire *che cos'è* $p(D\,|\,\theta)$).
 
 # Ripasso di probabilità
 
@@ -344,15 +349,21 @@ associata al verificarsi di un evento. Dato un fenomeno aleatorio (es. il lancio
 un dado), l'insieme di tutti i possibili esiti si chiama **spazio campionario**
 $S$; un **evento** è un sottoinsieme di $S$.
 
-Per esempio nel lancio di un dado lo spazio campionario è ....
-Un possibile evento è ....
+Per esempio nel lancio di un dado:
 
-Gli assiomi di Kolmogorov:
+- lo spazio campionario è ....
+- un possibile evento è ....
+- la probabilità che quest'evento si verifichi è ...
 
-1. una probabilità non può essere negativa;
-2. la probabilità dell'intero spazio campionario è 1;
-3. per due eventi reciprocamente esclusivi, la probabilità che se ne verifichi
-   uno *o* l'altro è la somma delle due probabilità.
+---
+
+Gli **assiomi** di Kolmogorov:
+
+**1.** Una probabilità non può essere negativa;
+
+**2.** La probabilità dell'intero spazio campionario è 1;
+
+**3.** Per due eventi reciprocamente esclusivi, la probabilità che se ne verifichi uno *o* l'altro è la somma delle due probabilità.
 
 
 ## Distribuzioni di probabilità {#sec-distribuzioni}
@@ -373,10 +384,6 @@ Alcune distribuzioni che incontreremo ([overview](https://distribution-explorer.
 | Normale | $-\infty < x < +\infty$ | $\mu$, $\sigma$ | $\mu$ | $\sigma^2$ |
 | Beta | $0 \le x \le 1$ | $a$, $b$ | $a/(a+b)$ | $\frac{ab}{(a+b)^2(a+b+1)}$ |
 
-::: {.callout-note}
-Una **densità** può tranquillamente superare 1 (provate
-`curve(dnorm(x, 0, 0.1), -0.5, 0.5)`), mentre una massa di probabilità no.
-:::
 
 ## Le distribuzioni in R {#sec-dpqr}
 
@@ -410,7 +417,7 @@ dpois(4, 3)          # esattamente 4 errori
 1 - ppois(2, 3)      # piu di 2 errori
 ```
 
-E possiamo *simulare* soggetti, verificando che media e varianza empiriche
+E possiamo *simulare* osservazioni, verificando che media e varianza empiriche
 convergono a $\lambda$
 
 ```{r}
@@ -458,8 +465,11 @@ d. Il 95° percentile è circa 246 secondi.
 
 Spesso ci interessa la probabilità del verificarsi *insieme* di due (o più)
 eventi. Costruiamo un esempio semplice: lanciamo una moneta equa **tre volte**.
-Lo spazio campionario ha 8 sequenze equiprobabili (TTT, TTC, TCT, ...). Definiamo
-due variabili casuali:
+
+> Qual'è lo spazio campionario?
+
+
+Lo spazio campionario ha 8 sequenze equiprobabili (TTT, TTC, TCT, ...). Definiamo due variabili casuali:
 
 - $X$ = numero di teste (0, 1, 2 o 3);
 - $Y$ = numero di *cambi* testa/croce nella sequenza (0, 1 o 2). Ad esempio la
@@ -686,21 +696,25 @@ Per iniziare, supponiamo (irrealisticamente) che $\theta$ possa assumere **solo 
 valori**: 0.25, 0.5, 0.75. Le nostre credenze a priori: il valore più plausibile è
 0.5 (probabilità 0.5), gli altri due si dividono il resto (0.25 ciascuno).
 
-Osserviamo 9 animali: 2 maschi e 7 femmine. Calcoliamo la posterior *a mano*,
-seguendo esattamente il teorema di Bayes:
-
 ```{r}
-#| label: kiwi-griglia
 theta <- c(0.25, 0.50, 0.75)          # valori possibili del parametro
 prior <- c(0.25, 0.50, 0.25)          # probabilita a priori
 
+plot(theta, prior, type = "h", lwd = 4, xlim = c(0, 1), ylim = c(0, 1),
+     xlab = expression(theta), ylab = expression(p(theta)), main = "Prior")
+```
+
+
+Osserviamo 9 animali: 2 maschi e 7 femmine. Calcoliamo la posterior seguendo esattamente il teorema di Bayes:
+
+```{r}
+#| label: kiwi-griglia
 # dati: 2 maschi su 9 animali
 z <- 2; N <- 9
 like <- theta^z * (1 - theta)^(N - z) # verosimiglianza di ciascun theta
 
 pD <- sum(like * prior)  # evidence: p(D) normalizzazione
 post <- (like * prior) / pD # teorema di Bayes
-round(data.frame(theta, prior, like, post), 4)
 ```
 
 ```{r}
@@ -718,7 +732,10 @@ plot(theta, like, type = "h", lwd = 4, xlim = c(0, 1),
 plot(theta, post, type = "h", lwd = 4, xlim = c(0, 1), ylim = c(0, 1),
      xlab = expression(theta), ylab = expression(p(theta~"|"~D)),
      main = "Posterior")
-par(mfrow = c(1, 1))
+```
+
+```{r}
+round(data.frame(theta, prior, like, post), 4)
 ```
 
 Leggiamo il risultato. A priori credevamo soprattutto in $\theta = 0.5$; i dati (2
@@ -751,8 +768,7 @@ cbind(theta, prior)
 
 a. Calcolate la likelihood di ciascun valore: $p(D\,|\,\theta) = \theta^{75}(1-\theta)^{240}$.
 b. Calcolate $p(D)$ e la posterior; rappresentate prior, likelihood e posterior.
-c. Che cosa è successo alle credenze a priori? Perché la posterior si concentra
-   tutta su un solo valore?
+c. Che cosa è successo alle credenze a priori? 
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 5"}
@@ -788,12 +804,10 @@ assegnava a 0.3 il peso maggiore. La posterior si concentra quindi quasi tutta s
 troppo povera: il valore "vero" (circa 0.24) non era nemmeno tra i candidati.
 :::
 
-## Dalla griglia alla prior continua: la distribuzione Beta {#sec-beta}
+## La distribuzione Beta {#sec-beta}
 
-Una proporzione è una variabile **continua** in $[0, 1]$: le prior a griglia sono
-utili per capire il meccanismo, ma la scelta naturale è una distribuzione di
-probabilità continua su $[0, 1]$. La famiglia standard è la **distribuzione
-Beta**:
+Una proporzione è una variabile **continua** in $[0, 1]$, quindi la scelta naturale è una distribuzione di
+probabilità continua su $[0, 1]$. La famiglia standard è la **distribuzione Beta**:
 
 $$
 p(\theta) = \text{Beta}(a, b) = \frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\,
@@ -825,9 +839,9 @@ legend("top", bty = "n", lwd = 2,
   0.4;
 - più $a + b$ è grande, più la prior è **informativa** (concentrata).
 
-## La coniugazione Beta-binomiale {#sec-coniugazione}
+## La Beta-binomiale {#sec-coniugazione}
 
-Ecco il motivo per cui la Beta è *la* prior delle proporzioni. Se
+Se
 
 - la prior è $p(\theta) = \text{Beta}(a, b)$, e
 - i dati sono $s$ successi e $f$ insuccessi,
@@ -842,8 +856,7 @@ Basta *sommare* i successi osservati al primo parametro e gli insuccessi al
 secondo. Quando prior e posterior appartengono alla stessa famiglia si parla di
 **prior coniugata**: la Beta è la coniugata della verosimiglianza binomiale.
 
-Vediamola in azione, un animale alla volta. La sequenza osservata
-dall'ornitologo era F, F, F, F, M, F, M, F, F: partendo dalla prior uniforme
+Immaginiamo di osservare un kiwi (animale) alla volta. La sequenza osservata dall'ornitologo era F, F, F, F, M, F, M, F, F: partendo dalla prior uniforme
 $\text{Beta}(1, 1)$, dopo ogni osservazione la posterior
 $\text{Beta}(1 + m,\, 1 + f)$ diventa la prior per l'osservazione successiva:
 
@@ -862,14 +875,11 @@ for (i in 1:9) {
         main = paste0("oss. ", i, ": ", ifelse(sequenza[i] == 1, "M", "F"),
                       "  (m=", m, ", f=", f, ")"))
 }
-par(mfrow = c(1, 1))
 ```
 
-Ogni femmina sposta la distribuzione verso sinistra, ogni maschio la tira
-indietro. Il risultato dopo 9 osservazioni è $\text{Beta}(3, 8)$ — esattamente
+Ogni femmina sposta la distribuzione verso sinistra. Il risultato dopo 9 osservazioni è $\text{Beta}(3, 8)$ — esattamente
 quello che si ottiene aggiornando in un colpo solo con $s = 2$ e $f = 7$:
-nell'aggiornamento bayesiano l'ordine delle osservazioni non conta, e la
-posterior di oggi è la prior di domani.
+nell'aggiornamento bayesiano l'ordine delle osservazioni non conta, e la posterior di oggi è la prior di domani.
 
 ## Riassumere la posterior {#sec-riassumere}
 
@@ -958,6 +968,7 @@ for (i in 1:3) {
         xlab = expression(theta), ylab = "densita di probabilita",
         main = paste0("Beta(", a, ", ", b, ") + dati"), ylim = c(0, 8))
   curve(dbeta(x, a, b), add = TRUE, lwd = 2, lty = 2)
+  abline(v = 0.2222222, col = "blue")
   legend("topright", bty = "n", lwd = 2, lty = c(2, 1),
          col = c("black", "red"), legend = c("prior", "posterior"))
 }
@@ -965,7 +976,7 @@ for (i in 1:3) {
 
 Con la prior uniforme la posterior segue i dati $\text{Beta}(1,1)$; con $\text{Beta}(50, 50)$ — che equivale a *98 osservazioni immaginarie* bilanciate — 9 animali osservati spostano pochissimo. 
 
-Seconda prova: stessa prior $\text{Beta}(50, 50)$, dati sempre più numerosi con la
+Stessa prior $\text{Beta}(10, 10)$, dati sempre più numerosi con la
 stessa proporzione osservata:
 
 ```{r}
@@ -979,11 +990,12 @@ N <- c(9, 90, 900)          # animali osservati
 
 par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
 for (i in 1:3) {
-  curve(dbeta(x, 50 + z[i], 50 + N[i] - z[i]), from = 0, to = 1, lwd = 2,
+  curve(dbeta(x, 10 + z[i], 10 + N[i] - z[i]), from = 0, to = 1, lwd = 2,
         col = "red", xlab = expression(theta), ylab = "densita di probabilita",
         main = paste0(z[i], " maschi su ", N[i]))
-  curve(dbeta(x, 50, 50), from = 0, to = 1, lwd = 2,lty = 2, add = TRUE,
+  curve(dbeta(x, 10, 10), from = 0, to = 1, lwd = 2,lty = 2, add = TRUE,
         col = "black", xlab = expression(theta), ylab = "densita di probabilita")
+  abline(v = 0.2222222, col = "blue")
 }
 ```
 
@@ -1000,10 +1012,7 @@ donne di 65 anni o più viene chiesto se si sentono generalmente felici; 118
 rispondono di sì. Con prior uniforme, la posterior è
 $\text{Beta}(1 + 118,\; 1 + 11) = \text{Beta}(119, 12)$.
 
-Qual è la probabilità che la **prossima** intervistata si dichiari felice?
-Attenzione: non basta "usare la stima di $\theta$", perché $\theta$ è incerto. La
-risposta bayesiana media su tutta la posterior e, nel modello binomiale, il
-risultato è proprio la media a posteriori:
+Qual è la probabilità che la **prossima** intervistata si dichiari felice?  La risposta bayesiana media su tutta la posterior (abbiamo incertezza sul vero valore di $\theta$) e, nel modello binomiale, il risultato è proprio la media a posteriori:
 
 $$
 Pr(\tilde{y} = 1\,|\,D) = \int \theta\; p(\theta\,|\,D)\, d\theta = E(\theta\,|\,D)
@@ -1029,7 +1038,8 @@ posterior e, con quel $\theta$, simulo un nuovo campione:
 #| label: felicita-predittiva
 set.seed(9)
 theta_draw <- rbeta(100000, 119, 12)  # incertezza su theta
-z_nuove <- rbinom(100000, size = 20, prob = theta_draw)  # nuovi dati simulati
+# nuovi dati simulati
+z_nuove <- rbinom(100000, size = 20, prob = theta_draw) 
 
 plot(table(z_nuove) / 100000, lwd = 3,
      xlab = "Numero di donne felici su 20 nuove interviste",
@@ -1057,7 +1067,6 @@ c. Calcolate l'intervallo di credibilità al 95% (quantile-based) e confrontatel
    con l'intervallo di confidenza di `binom.test(75, 315)`: sono simili? La loro
    *interpretazione* è la stessa?
 d. Calcolate $Pr(\theta \ge 0.5\,|\,D)$ e $Pr(\theta < 0.3\,|\,D)$.
-e. Scrivete una frase di conclusione "da articolo".
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 6"}
@@ -1083,16 +1092,11 @@ c. Numericamente quasi identici (con $n$ grande e prior uniforme succede spesso)
    ma l'interpretazione è diversa: solo per l'intervallo di credibilità possiamo
    dire che $\theta$ vi appartiene con probabilità 0.95.
 d. $Pr(\theta \ge 0.5\,|\,D)$ è praticamente 0; $Pr(\theta < 0.3\,|\,D) \approx 0.99$.
-e. Ad esempio: "la proporzione stimata di studenti a cui piace la statistica è
-   0.24, intervallo di credibilità al 95% [0.19; 0.29]; la probabilità che la
-   proporzione superi è < .001". 
 :::
 
 # Il caso normale {#sec-normale}
 
-Il modello probabilistico più usato per dati quantitativi è la normale. Il problema
-di inferenza ora ha **due parametri**: la media $\mu$ e la deviazione standard
-$\sigma$.
+Il problema di inferenza ora ha **due parametri**: la media $\mu$ e la deviazione standard $\sigma$.
 
 $$
 y_i \sim \mathcal{N}(\mu, \sigma)
@@ -1107,7 +1111,7 @@ un deficit cognitivo. I punteggi osservati:
 ```{r}
 #| label: qi-dati
 y <- c(73, 101, 74, 76, 112, 71, 71, 75, 97, 67)
-c(media = mean(y), ds = sd(y), n = length(y))
+c(media = mean(y), sd = sd(y), n = length(y))
 ```
 
 La domanda: che cosa possiamo dire di $\mu$, la media della popolazione da cui
@@ -1180,13 +1184,20 @@ ma molto più vicina ai dati, perché con $n = 10$ la precisione dei dati
 "tiro verso la prior" si chiama **shrinkage**: con pochi dati la stima viene
 regolarizzata verso ciò che è plausibile a priori, con molti dati sparisce.
 
+> Quanto è probabile che $\mu < 90$?
+
+```{r}
+pnorm(90, mu1, tau1)
+```
+
+
 ## Caso 2: $\mu$ e $\sigma$ entrambi ignoti {#sec-griglia-2d}
 
 Nel caso realistico anche $\sigma$ è ignota. Il modello diventa:
 
 $$
 \mu \sim \mathcal{N}(100, 10) \qquad
-\sigma \sim \text{Uniforme}(0, 30) \qquad
+\sigma \sim \text{Uniforme}(0, 40) \qquad
 y_i \sim \mathcal{N}(\mu, \sigma)
 $$
 
@@ -1434,10 +1445,7 @@ d. `posterior_interval()` usa i quantili centrali (5.5% e 94.5%), non l'HPD: con
 ## La stessa analisi con `brms` {#sec-brms}
 
 Prima di passare alle applicazioni, rifacciamo lo stesso modello con **brms**. A
-differenza di rstanarm, brms genera e **compila** codice Stan su misura: la prima
-stima richiede circa un minuto di compilazione, in cambio di una flessibilità
-molto maggiore (modelli multilivello, famiglie di distribuzioni arbitrarie...).
-La sintassi non cambia:
+differenza di rstanarm, brms genera e **compila** codice Stan su misura.
 
 ```{r}
 #| label: gioco-brms
@@ -1535,9 +1543,9 @@ statistiche dello studio (controllo: media 80.8, ds 10.05; trattamento: media
 ```{r}
 #| label: meditazione-dati
 library(MASS)
-set.seed(3)
-controllo   <- as.vector(mvrnorm(30, mu = 80.8, Sigma = 10.05^2, empirical = TRUE))
-trattamento <- as.vector(mvrnorm(30, mu = 75.6, Sigma = 14.76^2, empirical = TRUE))
+set.seed(1515)
+controllo   <- as.vector(mvrnorm(30, mu = 80.8, Sigma = 10.05^2, empirical = FALSE))
+trattamento <- as.vector(mvrnorm(30, mu = 75.6, Sigma = 14.76^2, empirical = FALSE))
 
 meditazione <- data.frame(gruppo = rep(c("controllo", "trattamento"), each = 30),
                           stress = c(controllo, trattamento))
@@ -1676,9 +1684,7 @@ loo1 <- loo(fit_rinf1)
 loo_compare(loo0, loo1)
 ```
 
-Il modello con la condizione sperimentale ha un elpd più alto, con una differenza
-pari a quasi tre volte il suo errore standard: la condizione migliora nettamente la
-capacità predittiva. Come per l'AIC, il confronto penalizza automaticamente la
+Come per l'AIC, il confronto penalizza automaticamente la
 complessità inutile.
 
 
@@ -1767,8 +1773,7 @@ b. calcolate $Pr(\mu_{pos} > \mu_{neg}\,|\,D)$;
 c. definite una ROPE per questa differenza, ad esempio $[-1, 1]$ punti
    ("praticamente equivalenti"), e calcolate la probabilità che la differenza le
    sia esterna (a destra);
-d. scrivete due righe di conclusione "da articolo" che riportino stime, intervalli
-   e probabilità (niente p-value!).
+d. scrivete due righe di conclusioneche riportino stime, intervalli e probabilità.
 :::
 
 ::: {.callout-tip collapse="true" title="Soluzione — Esercizio 10"}
@@ -1846,38 +1851,15 @@ $$
 p(D\,|\,H) = \int p(D\,|\,\theta, H)\, p(\theta\,|\,H)\, d\theta
 $$
 
-cioè proprio quel denominatore $p(D)$ del teorema di Bayes che finora abbiamo
-trattato da costante di normalizzazione e ignorato. Detto in parole:
-$p(D\,|\,H)$ è la probabilità che l'ipotesi — prior inclusa — assegnava ai dati
-**prima di vederli**.
 
-Per interpretare i valori del BF si usa comunemente la scala di Jeffreys (1961;
-si veda anche Kass & Raftery, 1995), la stessa del pannello inferiore della
-figura:
-
-| $BF_{10}$ | Evidenza a favore di $H_1$ |
-|-----------|----------------------------|
-| 1 – 3     | debole ("aneddotica")      |
-| 3 – 10    | moderata                   |
-| 10 – 30   | forte                      |
-| 30 – 100  | molto forte                |
-| > 100     | estrema                    |
-
-(I valori sotto 1 si leggono al contrario, come evidenza a favore di $H_0$:
-$BF_{10} = 0.1$ equivale a $BF_{01} = 10$. Un BF vicino a 1 è **assenza di
-evidenza**: i dati non distinguono le due ipotesi.)
-
-Calcolare il BF può essere difficile in certe situazioni: l'integrale della
-verosimiglianza marginale raramente ha una forma chiusa. Vediamo i due strumenti
-principali.
+Calcolare il BF può essere difficile in certe situazioni: l'integrale della verosimiglianza marginale raramente ha una forma chiusa. Vediamo i due strumenti principali.
 
 ## Stimare il BF: il bridge sampling {#sec-bridge}
 
 Nel caso generale — un modello di regressione con i suoi coefficienti e la sua
 $\sigma$ — la verosimiglianza marginale è un integrale su *tutti* i parametri e
 va **stimata** con metodi dedicati. Lo standard attuale è il **bridge sampling**
-(pacchetto bridgesampling; Gronau et al., 2020), che ricicla in modo astuto i
-draws MCMC del modello per stimare $p(D\,|\,H)$.
+(pacchetto bridgesampling; Gronau et al., 2020).
 
 Con brms servono due accorgimenti: stimare i modelli con
 `save_pars = save_pars(all = TRUE)` (il bridge sampling ha bisogno di tutti i
@@ -1948,11 +1930,7 @@ sarebbe $\text{Beta}(46, 46)$, *concentrata* proprio sul punto nullo:
 dbeta(0.5, 46, 46) / dbeta(0.5, 1, 1)   # BF01
 ```
 
-$BF_{01} \approx 7.6$: evidenza moderata **a favore** dell'ipotesi nulla — una
-cosa che il p-value non può dare mai: da un p alto si conclude solo "non rigetto
-$H_0$", che non è evidenza per $H_0$. È la distinzione della figura di Keysers:
-*absence of evidence* (BF vicino a 1) contro *evidence of absence* ($BF_{01}$
-grande).
+$BF_{01} \approx 7.6$: evidenza moderata **a favore** dell'ipotesi nulla.
 
 ```{r}
 #| label: sd-visual
@@ -1975,12 +1953,9 @@ curve(dbeta(x, 46, 46), from = 0, to = 1, lwd = 2, col = "red", ylim = c(0, 8),
       main = "45 maschi su 90: BF01 = 7.6")
 curve(dbeta(x, 1, 1), add = TRUE, lwd = 2, lty = 2)
 points(c(0.5, 0.5), c(dbeta(0.5, 1, 1), dbeta(0.5, 46, 46)), pch = 19)
-par(mfrow = c(1, 1))
 ```
 
-Nei due pannelli si "vede" il Savage-Dickey: a sinistra i dati hanno abbassato
-la densità nel punto nullo (evidenza debole contro $H_0$), a destra l'hanno
-alzata di quasi 8 volte (evidenza a favore).
+A sinistra i dati hanno abbassato la densità nel punto nullo (evidenza debole contro $H_0$), a destra l'hanno alzata di quasi 8 volte (evidenza a favore).
 
 E per la meditazione? L'ipotesi $\delta = 0$ è annidata nel modello con prior
 $\mathcal{N}(0, 5)$: il Savage-Dickey stima lo stesso BF del bridge sampling —
@@ -2060,58 +2035,127 @@ errori inferenziali. Tre regole pratiche (adattate dalle
    modello con prior più e meno informative e si verifica quanto cambiano le
    conclusioni.
 
-Facciamo la sensitivity analysis sull'esempio della meditazione:
+## Il ruolo della scala: quanto è informativa una prior? {#sec-prior-sd}
+
+Ma che cosa vuol dire, in concreto, "debolmente informativa"? Una prior normale su un coefficiente ha due parametri: la **media** (dove crediamo stia il valore — quasi sempre 0, per scetticismo: nessuna direzione privilegiata) e la **deviazione standard**, che decide *quanto lontano da zero siamo disposti a
+credere*. La regola pratica è quella dei due sd: una $\mathcal{N}(0, sd)$ dice che il coefficiente sta tra $-2 \cdot sd$ e $+2 \cdot sd$ con probabilità circa 0.98.
+
+Torniamo alla differenza di stress tra trattamento e controllo della @sec-rope (punteggi di stress attorno a 60–100). Tre prior candidate per $\delta$:
+
+- $\mathcal{N}(0, 1)$: differenza entro ±2 punti al 95% — prior **fortemente scettica**: esclude in partenza quasi ogni effetto interessante;
+- $\mathcal{N}(0, 5)$: entro ±10 punti — **debolmente informativa** su questa
+  scala: lascia spazio a ogni effetto realistico ed esclude solo gli assurdi (è
+  quella che abbiamo usato nella @sec-rope);
+- $\mathcal{N}(0, 50)$: entro ±100 punti — di fatto **piatta** sulla scala del
+  problema.
 
 ```{r}
-#| label: sensitivity
-#| results: hide
-prior_sd <- c(1, 5, 50)      # prior molto stretta, media, molto vaga
-stime <- data.frame(prior_sd = prior_sd, mediana = NA, q5 = NA, q95 = NA)
+#| label: prior-sd-curve
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+curve(dnorm(x, 0, 1), from = -30, to = 30, lwd = 2,
+      xlab = expression(delta), ylab = expression(p(delta)))
+curve(dnorm(x, 0, 5), add = TRUE, lwd = 2, col = "blue")
+curve(dnorm(x, 0, 50), add = TRUE, lwd = 2, col = "red")
+legend("topright", bty = "n", lwd = 2, col = c("black", "blue", "red"),
+       legend = c("Normal(0, 1)", "Normal(0, 5)", "Normal(0, 50)"))
+```
 
+Per rendersi conto di che cosa "crede" ciascuna prior, basta calcolare quanta probabilità assegna a un effetto più grande di 10 punti (in una direzione o nell'altra):
+
+```{r}
+#| label: prior-sd-massa
+sd_prior <- c(1, 5, 50)
+round(2 * pnorm(-10, mean = 0, sd = sd_prior), 3)   # Pr(|delta| > 10)
+```
+
+Per la prior stretta un effetto oltre i 10 punti è praticamente impossibile; per quella debolmente informativa è raro ma contemplato (5%); per quella vaga è
+quasi l'aspettativa di default (84%). 
+
+## La sensitivity analysis {#sec-sensitivity}
+
+Mettiamo alla prova le tre prior sull'esempio della meditazione, stimando tre volte lo stesso modello con brms. Ripassiamo la sintassi di `set_prior()`: si passa la distribuzione (come stringa) e si dice a che cosa si applica:
+
+```{r}
+#| label: sensitivity-fit
+#| results: hide
+prior_stretta <- set_prior("normal(0, 1)",             # la distribuzione
+                           class = "b",                # classe: coefficienti
+                           coef = "gruppotrattamento") # quale coefficiente
+
+prior_media <- set_prior("normal(0, 5)",  class = "b", coef = "gruppotrattamento")
+prior_vaga  <- set_prior("normal(0, 50)", class = "b", coef = "gruppotrattamento")
+
+fit_med_stretta <- brm(stress ~ gruppo, data = meditazione,
+                       prior = prior_stretta, seed = 1,
+                       file = "objects/fit_med_stretta",
+                       file_refit = "on_change")
+fit_med_media   <- brm(stress ~ gruppo, data = meditazione,
+                       prior = prior_media, seed = 1,
+                       file = "objects/fit_med_media",
+                       file_refit = "on_change")
+fit_med_vaga    <- brm(stress ~ gruppo, data = meditazione,
+                       prior = prior_vaga, seed = 1,
+                       file = "objects/fit_med_vaga",
+                       file_refit = "on_change")
+```
+
+Confrontiamo prior e posterior della differenza nei tre scenari (la linea
+punteggiata verticale è la differenza osservata nei dati, `r mean(meditazione$stress[meditazione$gruppo=="trattamento"])-mean(meditazione$stress[meditazione$gruppo=="controllo"])`):
+
+```{r}
+#| label: sensitivity-plot
+#| fig-height: 3.4
+#| fig-width: 9
+#| code-fold: true
+#| code-summary: "Codice del grafico"
+scala <- c(1, 5, 50)
+fits  <- list(fit_med_stretta, fit_med_media, fit_med_vaga)
+
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 1))
 for (k in 1:3) {
-  fit_k <- stan_glm(stress ~ gruppo, data = meditazione,
-                    prior = normal(0, prior_sd[k]), seed = 1)
-  draws <- as.data.frame(fit_k)$gruppotrattamento
-  stime$mediana[k] <- median(draws)
-  stime$q5[k]  <- quantile(draws, 0.05)
-  stime$q95[k] <- quantile(draws, 0.95)
+  draws <- as.data.frame(fits[[k]])$b_gruppotrattamento
+  plot(density(draws), lwd = 2, col = "red", xlim = c(-16, 10),
+       ylim = c(0, 0.45), main = paste0("Normal(0, ", scala[k], ")"),
+       xlab = expression(delta), ylab = "densita di probabilita")
+  curve(dnorm(x, 0, scala[k]), add = TRUE, lwd = 2, lty = 2)
+  abline(v = mean(meditazione$stress[meditazione$gruppo=="trattamento"])-mean(meditazione$stress[meditazione$gruppo=="controllo"]), lty = 3)
+  if (k == 1) legend("topleft", bty = "n", lwd = 2, lty = c(2, 1),
+                     col = c("black", "red"),
+                     legend = c("prior", "posterior"))
 }
+par(mfrow = c(1, 1))
 ```
 
 ```{r}
 #| label: sensitivity-tabella
-round(stime, 2)
+rbind(stretta = fixef(fit_med_stretta)["gruppotrattamento", ],
+      media   = fixef(fit_med_media)["gruppotrattamento", ],
+      vaga    = fixef(fit_med_vaga)["gruppotrattamento", ])
 ```
 
-Man mano che la prior si allarga, la stima si avvicina alla differenza osservata
-nei dati (circa −5.2): con scala 50 la prior non tocca praticamente nulla, con
-scala 5 lo shrinkage è moderato, con la prior strettissima $\mathcal{N}(0, 1)$ la
-differenza viene schiacciata quasi a zero (la prior non "crede" a differenze
-grandi, e $n = 60$ non basta a farle cambiare idea). La conclusione *qualitativa* —
-la differenza è plausibilmente negativa ma la sua rilevanza pratica resta incerta —
-regge per le scale da 5 in su, ed è questo che va riportato; con campioni piccoli
-o effetti deboli, però, l'entità della stima dipende dalla prior, e il lettore ha
-il diritto di saperlo.
+Con la prior
+strettissima $\mathcal{N}(0, 1)$ vince la prior: la posterior le resta
+incollata e la stima viene schiacciata quasi a zero ($n = 60$ non basta a farle
+"cambiare idea"). 
 
 ## Il prior predictive check {#sec-prior-predictive}
 
 Le regole aiutano, ma come si fa a *vedere* se le prior scelte sono sensate?
 L'idea è la stessa della distribuzione predittiva (@sec-predittiva), con la
-prior al posto della posterior: **simulare dati dal modello prima di avergli
-mostrato quelli veri**. Se il modello, con le nostre prior, genera dati assurdi,
-le prior vanno riviste. In brms basta l'argomento `sample_prior = "only"`: il
-modello viene "stimato" ignorando completamente i dati.
+prior al posto della posterior: **simulare dati dal modello prima di avergli mostrato quelli veri**. 
 
-Serve un esempio con più predittori. Simuliamo uno studio ($n = 70$) in cui la
-depressione dipende da gruppo, età e ansia — e siccome i dati li generiamo noi,
-conosciamo i coefficienti **veri**:
+Se il modello, con le nostre prior, genera dati assurdi,
+le prior vanno riviste. In brms basta l'argomento `sample_prior = "only"`: il modello viene "stimato" ignorando completamente i dati.
+
+Simuliamo uno studio ($n = 70$) in cui la depressione dipende da gruppo, età e ansia — e siccome i dati li generiamo noi, conosciamo i coefficienti **veri**:
 
 ```{r}
 #| label: depressione-dati
 set.seed(1555)
 n <- 70
 ansia  <- rnorm(n)
-eta    <- round(runif(n, 18, 50))
+eta    <- scale(round(runif(n, 18, 50)))[,1]
 gruppo <- rep(c("g1", "g2"), length.out = n)
 
 depressione <- 0.3 + 0.01 * eta + 0.5 * ansia +
@@ -2120,8 +2164,7 @@ dat_dep <- data.frame(depressione, gruppo, eta, ansia)
 range(depressione)
 ```
 
-Proviamo delle prior che *sembrano* innocue: $\mathcal{N}(0, 1)$ su tutti i
-coefficienti.
+Proviamo come prior $\mathcal{N}(0, 1)$ su tutti i coefficienti.
 
 ```{r}
 #| label: ppc-prior-1
@@ -2138,12 +2181,7 @@ fit_prior_1 <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
 pp_check(fit_prior_1, ndraws = 100)
 ```
 
-I dati veri (curva scura) stanno tra circa −2 e 5; il modello, prima di vederli,
-prevedeva tranquillamente valori di decine di punti. Il colpevole principale è
-`eta`: una pendenza "fino a ±2" (questo dice una $\mathcal{N}(0, 1)$) applicata a
-una variabile che va da 18 a 50 sposta le previsioni anche di ±50 punti su una
-scala che ne copre 7. **Le prior vanno pensate sulla scala di ciascun
-predittore.** Riproviamo:
+I dati veri (curva scura) stanno tra circa −2 e 5; il modello, prima di vederli, prevedeva tranquillamente valori di decine di punti. Riproviamo:
 
 ```{r}
 #| label: ppc-prior-2
@@ -2181,13 +2219,16 @@ fit_dep <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
 round(fixef(fit_dep), 2)
 ```
 
+> Cosa concludereste?
+
+
 ## Parameter recovery {#sec-recovery}
 
 Con dati simulati possiamo fare un controllo impossibile con i dati veri:
 verificare che il modello **recuperi i parametri usati per generare i dati**. Se
 non ci riesce con i dati "puliti" di una simulazione, non c'è motivo di fidarsi
 di quello che dirà sui dati veri: è un collaudo standard quando si mette in
-piedi un modello nuovo (e un ottimo modo per scoprire prior troppo strette).
+piedi un modello nuovo.
 
 ```{r}
 #| label: recovery
@@ -2200,27 +2241,35 @@ mcmc_recover_intervals(draws, true = veri, prob = 0.80, prob_outer = 0.95)
 
 I triangoli chiari sono i valori veri, i punti scuri le stime con i loro
 intervalli di credibilità (80% e 95%): tutti i valori veri cadono negli
-intervalli al 95%. Il collaudo però ci mostra anche un punto debole:
-l'intercetta è stimata male (e recuperata per un soffio). Non è un bug, è
-geometria: `eta` non è mai vicina a zero, quindi pendenza di `eta` e intercetta
-possono compensarsi quasi liberamente — con $n = 70$ e una pendenza vera
-piccolissima, l'intercetta resta mal identificata. Il parameter recovery serve
-proprio a scoprire *prima* queste fragilità (e suggerisce già un rimedio, la
-centratura dei predittori, di cui parleremo nella lezione sui GLM).
+intervalli al 95%. 
 
-::: {.callout-important}
-**Prior ed errori inferenziali.** Con campioni piccoli e prior molto informative,
-i risultati possono riflettere **quasi solo la prior** — e per il Bayes Factor la
-dipendenza dalla prior è ancora più forte: la prior sotto $H_1$ è parte
-integrante dell'ipotesi testata, e cambiarla cambia il BF anche quando le stime
-dei parametri restano identiche. Non è un problema se la prior è giustificata e
-**dichiarata** (è il senso
-della definizione soggettiva di probabilità: formalizzare in modo trasparente ciò
-che si crede); diventa un errore inferenziale se la prior viene scelta *dopo*
-aver visto i risultati, o taciuta. Prior dichiarate prima dell'analisi,
-prior predictive check e sensitivity check: è così che un'analisi bayesiana si
-tiene onesta.
-:::
+
+```{r}
+#| label: dep-2
+#| results: hide
+prior_3 <- c(
+  set_prior("normal(0, 0.25)", class = "b", coef = "gruppog2"),
+  set_prior("normal(0, 0.05)", class = "b", coef = "eta"),
+  set_prior("normal(0, 0.25)", class = "b", coef = "ansia"),
+  set_prior("normal(0, 2)", class = "sigma"))
+
+fit_dep2 <- brm(depressione ~ gruppo + eta + ansia, data = dat_dep,
+               prior = prior_3, seed = 1,
+               file = "objects/fit_dep2", file_refit = "on_change")
+```
+
+
+```{r}
+#| label: recovery2
+draws <- data.frame(fit_dep2)[, 1:5]
+colnames(draws)
+
+mcmc_recover_intervals(draws, true = veri, prob = 0.80, prob_outer = 0.95)
+
+round(fixef(fit_dep2), 2)
+
+```
+
 
 #  Esercizio - GLM {#sec-glm}
 
@@ -2310,11 +2359,7 @@ Il percorso completo di un'analisi bayesiana:
 8. **robustezza**: sensitivity analysis sulle prior — obbligatoria con campioni
    piccoli e ogni volta che si riporta un Bayes Factor.
 
-E la differenza di fondo da portare a casa: l'approccio frequentista tratta i
-parametri come costanti ignote e condiziona ai valori ipotizzati
-($P(\text{dati}\,|\,H_0)$); l'approccio bayesiano tratta i parametri come variabili
-casuali e condiziona ai dati osservati ($P(\text{ipotesi}\,|\,\text{dati})$) — che
-è, quasi sempre, la domanda a cui volevamo rispondere fin dall'inizio.
+
 
 # Riferimenti bibliografici
 
